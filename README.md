@@ -12,6 +12,18 @@ A Jetpack Compose based Android app that works alongside this web app for managi
 
 ---
 
+## Screenshots
+
+![Enter the organization](screenshots/enter_org.png)  
+*Enter the unique organization ID to upload builds*
+
+![Upload build](screenshots/upload_build.png)  
+*Enter version, label, and changelog and upload the build*
+
+![Upload Progress](screenshots/uploading.png)  
+*View upload progress and status*
+
+
 ## Features
 
 * Upload APK files (up to 100MB) via drag & drop or browse
