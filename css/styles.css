@@ -1,0 +1,231 @@
+/* Tailwind Configuration */
+@import url('https://cdn.tailwindcss.com');
+
+/* Add Tailwind configuration script */
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    'ij-black': '#000000',
+                    'ij-text': '#ffffff',
+                    'ij-text-dim': '#9ca3af',
+                    'ij-blue': '#087cfa',
+                    'ij-purple': '#b345f1',
+                    'ij-pink': '#ff318c',
+                    'ij-orange': '#ff6b35',
+                    'ij-success': '#00d4aa',
+                    'ij-error': '#ff5a67',
+                    'ij-warning': '#ffb800'
+                }
+            }
+        }
+    }
+</script>
+
+/* Custom CSS Variables */
+:root {
+    --ij-black: #000000;
+    --ij-text: #ffffff;
+    --ij-text-dim: #9ca3af;
+    --ij-blue: #087cfa;
+    --ij-purple: #b345f1;
+    --ij-pink: #ff318c;
+    --ij-orange: #ff6b35;
+    --ij-success: #00d4aa;
+    --ij-error: #ff5a67;
+    --ij-warning: #ffb800;
+}
+
+/* Base Styles */
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--ij-black);
+    overflow-x: hidden;
+}
+
+/* Background Gradient */
+.ij-gradient-bg {
+    background: var(--ij-black);
+    position: relative;
+    min-height: 100vh;
+    overflow-y: auto;
+}
+
+.ij-gradient-bg::before {
+    content: '';
+    position: fixed;
+    top: -10%;
+    right: -10%;
+    width: 60%;
+    height: 120%;
+    background: radial-gradient(ellipse at center, 
+        rgba(179, 69, 241, 0.15) 0%, 
+        rgba(255, 49, 140, 0.1) 30%, 
+        rgba(8, 124, 250, 0.08) 60%, 
+        transparent 80%);
+    animation: float 15s ease-in-out infinite;
+    z-index: 0;
+    border-radius: 50%;
+    filter: blur(40px);
+}
+
+.ij-gradient-bg::after {
+    content: '';
+    position: fixed;
+    bottom: -20%;
+    left: -15%;
+    width: 50%;
+    height: 100%;
+    background: radial-gradient(ellipse at center, 
+        rgba(255, 107, 53, 0.12) 0%, 
+        rgba(255, 49, 140, 0.08) 40%, 
+        transparent 70%);
+    animation: float 20s ease-in-out infinite reverse;
+    z-index: 0;
+    border-radius: 50%;
+    filter: blur(40px);
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+/* Card Styles */
+.jb-card {
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Input Styles */
+.jb-input {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.jb-input:focus {
+    border-color: var(--ij-blue);
+    box-shadow: 0 0 0 3px rgba(8, 124, 250, 0.3);
+    outline: none;
+}
+
+.jb-input.error {
+    border-color: var(--ij-error);
+    box-shadow: 0 0 0 3px rgba(255, 90, 103, 0.3), 0 0 15px rgba(255, 90, 103, 0.4);
+    animation: errorGlow 0.5s ease-out;
+}
+
+@keyframes errorGlow {
+    0% { box-shadow: 0 0 0 3px rgba(245, 101, 101, 0.2), 0 0 10px rgba(245, 101, 101, 0.3); }
+    50% { box-shadow: 0 0 0 5px rgba(245, 101, 101, 0.3), 0 0 20px rgba(245, 101, 101, 0.5); }
+    100% { box-shadow: 0 0 0 3px rgba(245, 101, 101, 0.2), 0 0 10px rgba(245, 101, 101, 0.3); }
+}
+
+/* Button Styles */
+.jb-button {
+    background: linear-gradient(135deg, var(--ij-blue) 0%, var(--ij-purple) 100%);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.jb-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px rgba(8, 124, 250, 0.4);
+}
+
+.jb-button:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.jb-button:hover:before {
+    left: 100%;
+}
+
+/* Progress Bar */
+.progress-glow {
+    box-shadow: 0 0 20px rgba(8, 124, 250, 0.5);
+}
+
+/* Modal Styles */
+.modal-backdrop {
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Layout */
+.content-container {
+    position: relative;
+    z-index: 10;
+    padding: 1rem;
+    max-width: 100%;
+}
+
+@media (min-width: 768px) {
+    .content-container {
+        padding: 2rem;
+    }
+}
+
+/* Utility Classes - Force colors */
+.text-ij-text { color: #ffffff !important; }
+.text-ij-text-dim { color: #9ca3af !important; }
+.text-ij-blue { color: #087cfa !important; }
+.text-ij-purple { color: #b345f1 !important; }
+.text-ij-pink { color: #ff318c !important; }
+.text-ij-orange { color: #ff6b35 !important; }
+.text-ij-success { color: #00d4aa !important; }
+.text-ij-error { color: #ff5a67 !important; }
+.text-ij-warning { color: #ffb800 !important; }
+
+/* Background colors */
+.bg-ij-blue { background-color: #087cfa !important; }
+.bg-ij-purple { background-color: #b345f1 !important; }
+.bg-ij-pink { background-color: #ff318c !important; }
+.bg-ij-orange { background-color: #ff6b35 !important; }
+.bg-ij-success { background-color: #00d4aa !important; }
+.bg-ij-error { background-color: #ff5a67 !important; }
+
+/* Border colors */
+.border-ij-blue { border-color: #087cfa !important; }
+.border-ij-purple { border-color: #b345f1 !important; }
+.border-ij-error { border-color: #ff5a67 !important; }
+
+/* Hide default browser validation tooltips */
+input:invalid,
+textarea:invalid {
+    box-shadow: none;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}

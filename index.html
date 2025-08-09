@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QDrop - Build Upload Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ij-black': '#000000',
+                        'ij-text': '#ffffff',
+                        'ij-text-dim': '#9ca3af',
+                        'ij-blue': '#087cfa',
+                        'ij-purple': '#b345f1',
+                        'ij-pink': '#ff318c',
+                        'ij-orange': '#ff6b35',
+                        'ij-success': '#00d4aa',
+                        'ij-error': '#ff5a67',
+                        'ij-warning': '#ffb800'
+                    },
+                    fontFamily: {
+                        'jetbrains': ['JetBrains Mono', 'Monaco', 'Consolas', 'monospace'],
+                        'inter': ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #000000;
+            overflow-x: hidden;
+        }
+
+        .ij-gradient-bg {
+            background: #000000;
+            position: relative;
+            min-height: 100vh;
+            overflow-y: auto;
+        }
+
+        .ij-gradient-bg::before {
+            content: '';
+            position: fixed;
+            top: -10%;
+            right: -10%;
+            width: 60%;
+            height: 120%;
+            background: radial-gradient(ellipse at center, 
+                rgba(179, 69, 241, 0.15) 0%, 
+                rgba(255, 49, 140, 0.1) 30%, 
+                rgba(8, 124, 250, 0.08) 60%, 
+                transparent 80%);
+            animation: float 15s ease-in-out infinite;
+            z-index: 0;
+            border-radius: 50%;
+            filter: blur(40px);
+        }
+
+        .ij-gradient-bg::after {
+            content: '';
+            position: fixed;
+            bottom: -20%;
+            left: -15%;
+            width: 50%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, 
+                rgba(255, 107, 53, 0.12) 0%, 
+                rgba(255, 49, 140, 0.08) 40%, 
+                transparent 70%);
+            animation: float 20s ease-in-out infinite reverse;
+            z-index: 0;
+            border-radius: 50%;
+            filter: blur(40px);
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+        
+        .jb-card {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .jb-input {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .jb-input:focus {
+            border-color: #087cfa;
+            box-shadow: 0 0 0 3px rgba(8, 124, 250, 0.3);
+            outline: none;
+        }
+        
+        .jb-input.error {
+            border-color: #ff5a67;
+            box-shadow: 0 0 0 3px rgba(255, 90, 103, 0.3), 0 0 15px rgba(255, 90, 103, 0.4);
+            animation: errorGlow 0.5s ease-out;
+        }
+        
+        @keyframes errorGlow {
+            0% { box-shadow: 0 0 0 3px rgba(245, 101, 101, 0.2), 0 0 10px rgba(245, 101, 101, 0.3); }
+            50% { box-shadow: 0 0 0 5px rgba(245, 101, 101, 0.3), 0 0 20px rgba(245, 101, 101, 0.5); }
+            100% { box-shadow: 0 0 0 3px rgba(245, 101, 101, 0.2), 0 0 10px rgba(245, 101, 101, 0.3); }
+        }
+        
+        .jb-button {
+            background: linear-gradient(135deg, #087cfa 0%, #b345f1 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .jb-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(8, 124, 250, 0.4);
+        }
+        
+        .jb-button:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .jb-button:hover:before {
+            left: 100%;
+        }
+        
+        .progress-glow {
+            box-shadow: 0 0 20px rgba(8, 124, 250, 0.5);
+        }
+        
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .content-container {
+            position: relative;
+            z-index: 10;
+            padding: 1rem;
+            max-width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .content-container {
+                padding: 2rem;
+            }
+        }
+
+        /* Hide default browser validation tooltips */
+        input:invalid,
+        textarea:invalid {
+            box-shadow: none;
+        }
+        
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="ij-gradient-bg text-ij-text font-inter">
+    <!-- Organization Setup Modal -->
+    <div id="orgModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="jb-card rounded-2xl p-6 w-96 max-w-md mx-4 fade-in relative z-10">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-ij-blue to-ij-purple flex items-center justify-center">
+                    <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-ij-text mb-2">Welcome to QDrop</h2>
+                <p class="text-ij-text-dim">Enter your organization ID to get started</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="orgIdInput" class="block text-sm font-medium text-ij-text mb-2">
+                        Organization ID
+                    </label>
+                    <input 
+                        type="text" 
+                        id="orgIdInput" 
+                        placeholder="e.g., acme-corp"
+                        class="jb-input w-full px-4 py-3 rounded-xl text-ij-text placeholder-ij-text-dim font-jetbrains"
+                    >
+                    <div id="orgErrorMessage" class="text-ij-error text-sm mt-2 hidden"></div>
+                </div>
+                
+                <div class="flex space-x-3 pt-4">
+                    <button id="orgCancelBtn" class="flex-1 px-4 py-3 rounded-xl border border-gray-600 text-ij-text-dim hover:text-ij-text hover:border-gray-500 transition-all duration-200">
+                        Cancel
+                    </button>
+                    <button id="orgSaveBtn" class="flex-1 jb-button px-4 py-3 rounded-xl text-white font-medium">
+                        Get Started
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-container">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-ij-blue via-ij-purple to-ij-pink mb-4 shadow-2xl">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-ij-text mb-3 tracking-tight">
+                Q<span class="bg-gradient-to-r from-ij-blue via-ij-purple to-ij-pink bg-clip-text text-transparent">Drop</span>
+            </h1>
+            <p class="text-lg text-ij-text-dim font-light max-w-2xl mx-auto">
+                Upload and manage your QA builds with <span class="text-ij-blue font-medium">precision</span> and <span class="text-ij-purple font-medium">style</span>
+            </p>
+        </div>
+
+        <!-- Main Card -->
+        <div class="max-w-2xl mx-auto">
+            <div class="jb-card rounded-3xl shadow-2xl p-6 relative overflow-hidden">
+                <!-- Organization Section -->
+                <div id="orgSection" class="mb-6 hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-ij-orange to-ij-pink flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-semibold text-ij-text">Organization</h3>
+                        </div>
+                        <button id="changeOrgBtn" class="text-sm text-ij-blue hover:text-ij-blue-light transition-colors">
+                            Change
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="orgIdField" 
+                            class="jb-input w-full px-4 py-3 rounded-xl text-ij-text font-jetbrains pr-12"
+                            readonly
+                        >
+                        <button id="editOrgBtn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-ij-text-dim hover:text-ij-text transition-colors">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.828-2.828z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Upload Form -->
+                <div id="uploadSection" class="hidden">
+                    <form id="uploadForm" class="space-y-4" novalidate>
+                        <!-- Version Input -->
+                        <div>
+                            <label for="version" class="block text-sm font-medium text-ij-text mb-2">
+                                Version <span class="text-ij-error">*</span>
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="version" 
+                                    name="version" 
+                                    placeholder="e.g., 1.0.3"
+                                    class="jb-input w-full px-4 py-3 rounded-xl text-ij-text placeholder-ij-text-dim font-jetbrains text-lg"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Label Input -->
+                        <div>
+                            <label for="label" class="block text-sm font-medium text-ij-text mb-2">
+                                Label <span class="text-ij-error">*</span>
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="label" 
+                                    name="label" 
+                                    placeholder="e.g., Development, Staging, Production"
+                                    class="jb-input w-full px-4 py-3 rounded-xl text-ij-text placeholder-ij-text-dim font-jetbrains text-lg"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Changelog Textarea -->
+                        <div>
+                            <label for="changelog" class="block text-sm font-medium text-ij-text mb-2">
+                                Changelog <span class="text-ij-error">*</span>
+                            </label>
+                            <textarea 
+                                id="changelog" 
+                                name="changelog" 
+                                rows="4"
+                                placeholder="• Fixed critical authentication bug&#10;• Added new dashboard features&#10;• Improved performance by 25%&#10;• Updated dependencies"
+                                class="jb-input w-full px-4 py-3 rounded-xl text-ij-text placeholder-ij-text-dim resize-none"
+                            ></textarea>
+                        </div>
+
+                        <!-- File Input -->
+                        <div>
+                            <label for="apkFile" class="block text-sm font-medium text-ij-text mb-2">
+                                APK File <span class="text-ij-error">*</span>
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="file" 
+                                    id="apkFile" 
+                                    name="apkFile" 
+                                    accept=".apk"
+                                    class="hidden"
+                                >
+                                <div id="fileInputDisplay" class="jb-input border-2 border-dashed border-gray-600 hover:border-ij-blue cursor-pointer rounded-xl p-6 text-center transition-all duration-300 group">
+                                    <div class="flex flex-col items-center">
+                                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-ij-blue to-ij-purple flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                            </svg>
+                                        </div>
+                                        <div id="fileInputText" class="text-ij-text mb-2">
+                                            <span class="text-ij-blue font-medium">Click to browse</span> or drag and drop your APK file here
+                                        </div>
+                                        <div class="text-sm text-ij-text-dim">Maximum file size: 100MB</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button 
+                            type="submit" 
+                            id="submitBtn"
+                            class="jb-button w-full py-3 rounded-xl text-white font-semibold text-lg shadow-lg"
+                        >
+                            <span class="flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                Submit Build
+                            </span>
+                        </button>
+                    </form>
+
+                    <!-- Progress Bar -->
+                    <div id="progressContainer" class="mt-6 hidden">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-ij-text">Uploading your build...</span>
+                            <span id="progressPercent" class="text-sm text-ij-text-dim font-jetbrains">0%</span>
+                        </div>
+                        <div class="bg-gray-800 rounded-full h-3 overflow-hidden">
+                            <div id="progressBar" class="bg-gradient-to-r from-ij-blue to-ij-purple h-3 rounded-full transition-all duration-500 progress-glow" style="width: 0%"></div>
+                        </div>
+                        <p id="progressText" class="text-sm text-ij-text-dim mt-2 font-jetbrains">Preparing upload...</p>
+                    </div>
+
+                    <!-- Status Message Area -->
+                    <div id="statusMessage" class="mt-6 hidden">
+                        <div id="statusContent" class="p-4 rounded-xl border-l-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Github -->
+            <div class="mt-8">
+    <div class="jb-card rounded-3xl shadow-2xl p-6 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-ij-blue via-ij-purple to-ij-pink flex items-center justify-center flex-shrink-0">
+                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-ij-text">Support QDrop Development</h3>
+                    <p class="text-ij-text-dim text-sm">Check out the code and contribute! ⭐</p>
+                </div>
+            </div>
+            <a href="https://github.com/styropyr0/Qdrop" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 bg-gradient-to-r from-ij-blue to-ij-purple hover:from-ij-purple hover:to-ij-pink text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+                <span class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    View on GitHub
+                </span>
+            </a>
+        </div>
+    </div>
+</div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/organization-manager.js"></script>
+    <script src="js/upload-manager.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
