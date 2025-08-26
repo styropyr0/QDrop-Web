@@ -16,7 +16,7 @@ class UploadManager {
     setupFileInput() {
         const fileInput = document.getElementById('apkFile');
         const fileDisplay = document.getElementById('fileInputDisplay');
-        
+
         if (!fileInput || !fileDisplay) return;
 
         fileDisplay.addEventListener('click', () => fileInput.click());
@@ -67,10 +67,10 @@ class UploadManager {
         const fileText = document.getElementById('fileInputText');
         const fileDisplay = document.getElementById('fileInputDisplay');
         if (!fileText || !fileDisplay) return;
-        
+
         // Clear error state
         fileDisplay.classList.remove('error');
-        
+
         // Validate file
         const validation = this.validateFile(file);
         if (!validation.valid) {
@@ -104,7 +104,7 @@ class UploadManager {
 
     async handleSubmit(e) {
         e.preventDefault();
-        
+
         const formData = new FormData(e.target);
 
         if (!this.validateForm(formData)) {
@@ -118,7 +118,7 @@ class UploadManager {
 
         // Validate organization ID before upload
         try {
-            const isValidOrg = await this.orgManager.validateOrgIdWithFirebase(this.orgManager.orgId);
+            const isValidOrg = (await this.orgManager.validateOrgIdWithFirebase(this.orgManager.orgId)).exists();
             if (!isValidOrg) {
                 this.showStatus('Invalid organization ID. Upload not allowed. Please contact your administrator.', 'error');
                 return;
@@ -129,25 +129,40 @@ class UploadManager {
         }
 
         try {
+            let replacePrevious = false;
+            let latestBuildKey = null;
+            if (document.getElementById("replace_prev_check").checked) {
+                latestBuildKey = await this.getLatestBuildKey(formData.get('label')?.trim());
+                replacePrevious = true;
+            }
+
             this.setUploading(true);
             this.showProgress(true);
 
             // Upload to Supabase
             this.updateProgress(10, 'Uploading APK file...');
-            const apkUrl = await this.uploadToSupabase(formData.get('apkFile'), formData.get('version')?.trim());
+            const apkUrl = await this.uploadToR2(formData.get('apkFile'), formData.get('version')?.trim());
 
             // Save to Firebase
             this.updateProgress(80, 'Saving metadata...');
             const metadata = this.createMetadata(formData, apkUrl);
-            const buildId = await this.saveToFirebase(metadata);
+
+            let buildId = "";
+            if (!replacePrevious) {
+                buildId = await this.saveToFirebase(metadata);
+            } else {
+                buildId = await this.updateBuildInFirebase(latestBuildKey, metadata);
+                buildId = latestBuildKey;
+            }
 
             localStorage.setItem('label', metadata.label);
+            localStorage.setItem('user', metadata.user);
             this.updateProgress(100, 'Upload complete!');
             this.showStatus(`Build ${formData.get('version')?.trim()} uploaded successfully! Build ID: ${buildId}`, 'success');
-        
+
             // Reset form
             this.resetForm(e.target);
-        
+
             setTimeout(() => this.showProgress(false), 3000);
 
         } catch (error) {
@@ -167,65 +182,164 @@ class UploadManager {
             apkUrl,
             uploadedAt: new Date().toISOString(),
             label: formData.get('label')?.trim(),
+            user: formData.get('user')?.trim(),
             fileName: formData.get('apkFile').name,
-            fileSize: formData.get('apkFile').size
+            fileSize: formData.get('apkFile').size,
+            isUpdate: document.getElementById("replace_prev_check").checked
         };
     }
 
-    async uploadToSupabase(file, version) {
-        const fileName = `${this.orgManager.orgId}_${version}_${Date.now()}.apk`;
-        const filePath = `builds/${this.orgManager.orgId}/${fileName}`;
+    async getLatestBuildKey(label) {
+        try {
+            // reference to this org’s builds
+            const buildsRef = database.ref(`qa_builds/${this.orgManager.orgId}`);
 
-        const { data, error } = await supabase.storage
-            .from(CONFIG.STORAGE_BUCKET)
-            .upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: false,
-                onUploadProgress: (progress) => {
-                    const percent = Math.round((progress.loaded / progress.total) * 70) + 10;
-                    this.updateProgress(percent, `Uploading... ${(progress.loaded / 1024 / 1024).toFixed(1)}MB / ${(progress.total / 1024 / 1024).toFixed(1)}MB`);
+            // query builds with the given label
+            const snapshot = await buildsRef
+                .orderByChild("label")
+                .equalTo(label)
+                .once("value");
+
+            if (!snapshot.exists()) return null;
+
+            let latestKey = null;
+            let latestTime = 0;
+
+            snapshot.forEach(child => {
+                const val = child.val();
+                const uploadedAt = new Date(val.uploadedAt).getTime();
+                if (uploadedAt > latestTime) {
+                    latestTime = uploadedAt;
+                    latestKey = child.key;
                 }
             });
 
-        if (error) {
-            throw new Error(`Upload failed: ${error.message}`);
+            return latestKey;
+        } catch (err) {
+            console.error("Error in getLatestBuildKey:", err);
+            return null;
         }
+    }
 
-        this.updateProgress(75, 'Getting public URL...');
+    async uploadToR2(file, version) {
+        try {
+            const fileName = `${this.orgManager.orgId}_${version}_${Date.now()}.apk`;
 
-        const { data: urlData } = supabase.storage
-            .from(CONFIG.STORAGE_BUCKET)
-            .getPublicUrl(filePath);
+            this.updateProgress(5, 'Getting upload URL...');
 
-        if (!urlData?.publicUrl) {
-            throw new Error('Failed to get public URL');
+            // Call your server's API to get presigned URL
+            const response = await fetch('/api/upload-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fileName: fileName,
+                    fileType: file.type
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to get upload URL: ${response.statusText}`);
+            }
+
+            const { presignedUrl } = await response.json();
+
+            this.updateProgress(10, 'Starting upload...');
+
+            // Upload file using the presigned URL
+            await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open("PUT", presignedUrl, true);
+                xhr.setRequestHeader("Content-Type", file.type);
+
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        const percent = Math.round((event.loaded / event.total) * 70) + 10;
+                        this.updateProgress(percent, `Uploading... ${(event.loaded / 1024 / 1024).toFixed(1)}MB / ${(event.total / 1024 / 1024).toFixed(1)}MB`);
+                    }
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve();
+                    } else {
+                        reject(new Error(`Upload failed: ${xhr.statusText}`));
+                    }
+                };
+
+                xhr.onerror = () => reject(new Error("Upload failed due to network error"));
+                xhr.send(file);
+            });
+
+            this.updateProgress(80, 'Upload complete, getting public URL...');
+
+            // Return public URL (remove query parameters from presigned URL)
+            const publicUrl = presignedUrl
+                .split('?')[0]
+                .replace(
+                    'https://qdrop.ca3d30cf900eb4f78198b750bce85367.r2.cloudflarestorage.com',
+                    'https://pub-03b74c9b026549ce8ff4ca1720eeb45a.r2.dev'
+                );
+
+            this.updateProgress(100, 'File uploaded successfully!');
+
+            return publicUrl;
+
+        } catch (error) {
+            console.error('Upload error:', error);
+            throw error;
         }
-
-        return urlData.publicUrl;
     }
 
     async saveToFirebase(metadata) {
         const buildsRef = database.ref(`qa_builds/${this.orgManager.orgId}`);
         const newBuildRef = buildsRef.push();
-        
+
         await newBuildRef.set(metadata);
         return newBuildRef.key;
     }
 
+    async updateBuildInFirebase(key, metadata) {
+        try {
+            const buildRef = database.ref(`qa_builds/${this.orgManager.orgId}/${key}`);
+            await buildRef.update(metadata);
+            return true;
+        } catch (err) {
+            console.error("Error updating build in Firebase:", err);
+            return false;
+        }
+    }
+
     resetForm(form) {
         form.reset();
+        this.setStoredData();
         const fileText = document.getElementById('fileInputText');
         if (fileText) {
             fileText.innerHTML = '<span class="text-ij-blue font-medium">Click to browse</span> or drag and drop your APK file here';
         }
     }
 
+    setStoredData() {
+        const orgSection = document.getElementById('orgSection');
+        const uploadSection = document.getElementById('uploadSection');
+        const orgField = document.getElementById('orgIdField');
+        const label = document.getElementById('labelField');
+        const name = document.getElementById('userField');
+        const orgName = document.getElementById('orgName');
+
+        if (orgSection) orgSection.classList.remove('hidden');
+        if (uploadSection) uploadSection.classList.remove('hidden');
+        if (orgField) orgField.value = this.orgId;
+        if (label) label.value = localStorage.getItem('label') || '';
+        if (orgName) orgName.textContent = localStorage.getItem('org_name') || '';
+        if (name) name.value = localStorage.getItem('user') || '';
+    }
+
     setUploading(uploading) {
         const submitBtn = document.getElementById('submitBtn');
         const inputs = document.querySelectorAll('input, textarea, button');
-        
+
         inputs.forEach(input => input.disabled = uploading);
-        
+
         if (submitBtn) {
             submitBtn.innerHTML = uploading ? this.getUploadingButtonHTML() : this.getSubmitButtonHTML();
         }
@@ -271,7 +385,7 @@ class UploadManager {
         const progressBar = document.getElementById('progressBar');
         const progressPercent = document.getElementById('progressPercent');
         const progressText = document.getElementById('progressText');
-        
+
         if (progressBar) progressBar.style.width = `${percent}%`;
         if (progressPercent) progressPercent.textContent = `${percent}%`;
         if (progressText) progressText.textContent = text;
@@ -280,11 +394,11 @@ class UploadManager {
     showStatus(message, type) {
         const statusMessage = document.getElementById('statusMessage');
         const statusContent = document.getElementById('statusContent');
-        
+
         if (!statusMessage || !statusContent) return;
-        
+
         statusMessage.classList.remove('hidden');
-        
+
         const colors = {
             success: 'bg-ij-success/10 border-ij-success text-ij-success',
             error: 'bg-ij-error/10 border-ij-error text-ij-error',
@@ -300,6 +414,7 @@ class UploadManager {
         const errors = [];
         const version = formData.get('version')?.trim();
         const label = formData.get('label')?.trim();
+        const name = formData.get('user')?.trim();
         const changelog = formData.get('changelog')?.trim();
         const file = formData.get('apkFile');
 
@@ -318,9 +433,9 @@ class UploadManager {
             errors.push('Label is required');
         }
 
-        if (!changelog) {
-            this.showFieldError('changelog');
-            errors.push('Changelog is required');
+        if (!name) {
+            this.showFieldError('userField');
+            errors.push('User is required');
         }
 
         if (!file || file.size === 0) {
@@ -336,7 +451,7 @@ class UploadManager {
         if (!field) return;
 
         field.classList.add('error');
-        
+
         // Auto-remove error state after 3 seconds
         setTimeout(() => {
             field.classList.remove('error');

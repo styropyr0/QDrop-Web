@@ -38,9 +38,8 @@ class OrganizationManager {
         console.log('Validating org ID:', orgId);
         
         try {
-            const isValid = await this.validateOrgIdWithFirebase(orgId);
-            
-            if (!isValid) {
+            const snapshot = await this.validateOrgIdWithFirebase(orgId);
+            if (!snapshot || !snapshot.exists()) {
                 this.showOrgError('Organization ID not found. Please contact your administrator for a valid organization ID.');
                 return;
             }
@@ -48,6 +47,7 @@ class OrganizationManager {
             console.log('Saving org ID:', orgId);
             this.orgId = orgId;
             localStorage.setItem('qdrop_org_id', orgId);
+            localStorage.setItem('org_name', snapshot.val().name || '');
             this.hideOrgModal();
             this.showMainInterface();
         } catch (error) {
@@ -61,11 +61,11 @@ class OrganizationManager {
             // Check if organization exists in Firebase
             const orgRef = database.ref(`organizations/${orgId}`);
             const snapshot = await orgRef.once('value');
-            
-            return snapshot.exists();
+
+            return snapshot.exists() ? snapshot: null;
         } catch (error) {
             console.error('Firebase validation error:', error);
-            return false;
+            return null;
         }
     }
 
@@ -75,11 +75,15 @@ class OrganizationManager {
         const uploadSection = document.getElementById('uploadSection');
         const orgField = document.getElementById('orgIdField');
         const label = document.getElementById('labelField');
+        const name = document.getElementById('userField');
+        const orgName = document.getElementById('orgName');
 
         if (orgSection) orgSection.classList.remove('hidden');
         if (uploadSection) uploadSection.classList.remove('hidden');
         if (orgField) orgField.value = this.orgId;
         if (label) label.value = localStorage.getItem('label') || '';
+        if (orgName) orgName.textContent = localStorage.getItem('org_name') || '';
+        if (name) name.value = localStorage.getItem('user') || '';
     }
 
     editOrg() {
