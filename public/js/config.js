@@ -10,6 +10,7 @@
 const CONFIG = {
     // ------------------------
     // Supabase Configuration
+    // Supabase is deprecated. It will be removed in future releases.
     // ------------------------
     SUPABASE_URL: 'https://YOUR_PROJECT_ID.supabase.co',
     SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY', // Public key (safe for client-side use)

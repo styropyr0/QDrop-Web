@@ -9,6 +9,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -357,7 +359,7 @@
                                     class="jb-input w-full px-4 py-3 rounded-xl text-ij-text placeholder-ij-text-dim font-jetbrains text-lg">
                             </div>
                         </div>
-
+                        
                         <!-- Changelog Textarea -->
                         <div>
                             <label for="changelog" class="block text-sm font-medium text-ij-text mb-2">
@@ -367,7 +369,33 @@
                                 placeholder="• Fixed critical authentication bug&#10;• Added new dashboard features&#10;• Improved performance by 25%&#10;• Updated dependencies"
                                 class="jb-input w-full px-4 py-3 rounded-xl text-ij-text placeholder-ij-text-dim resize-none"></textarea>
                         </div>
-
+                        
+                        <!-- Category Dropdown -->
+                        <div id="categoryDropdown" class="relative mb-18">
+                            <label for="categoryInput" class="block text-sm font-medium text-ij-text mb-2 font-['JetBrains_Mono']">
+                                Application <span class="text-ij-error">*</span>
+                            </label>
+                        
+                            <input type="hidden" id="categoryInput" name="category">
+                        
+                            <!-- Trigger button -->
+                            <button id="dropdownButton" type="button"
+                                class="jb-input w-full px-4 py-3 rounded-xl text-ij-text bg-transparent border border-ij-border text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-ij-accent font-['JetBrains_Mono']">
+                                <span id="selectedOption">Select the application</span>
+                                <svg class="w-4 h-4 text-ij-text-dim" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                        
+                            <!-- Dropdown menu -->
+                            <div id="dropdownMenu"
+                                class="hidden absolute z-10 mt-2 w-full border border-ij-border rounded-xl shadow-lg bg-ij-bg/80 backdrop-blur-xl font-['JetBrains_Mono']">
+                                <ul id="dropdownList" class="py-2 text-sm text-ij-text">
+                                </ul>
+                            </div>
+                        </div>
+                        
                         <!-- File Input -->
                         <div>
                             <label for="apkFile" class="block text-sm font-medium text-ij-text mb-2">
@@ -395,7 +423,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Replace Previous Build Checkbox -->
                         <label class="flex items-center cursor-pointer select-none">
                             <input type="checkbox" id="replace_prev_check" class="hidden peer">
@@ -439,10 +467,26 @@
                         </p>
                     </div>
 
-                    <!-- Status Message Area -->
-                    <div id="statusMessage" class="mt-6 hidden">
-                        <div id="statusContent" class="p-4 rounded-xl border-l-4"></div>
+                    <div id="statusAndQr" class="mt-6 hidden flex items-start gap-6">
+                        <div id="statusMessage" class="flex-1 flex flex-col justify-between h-full">
+
+                            <div id="statusContent" class="p-4 rounded-xl border-l-4">
+                                Build is ready!
+                            </div>
+
+                            <br>
+                            <div id="statusInstruction" class="text-sm text-gray-500">
+                                Scan this QR to directly access this build
+                            </div>
+                            <p id="qrValue" class="text-[10px] text-ij-text-dim mt-1 break-all font-jetbrains"></p>
+
+                        </div>
+
+                        <div id="qrContainer" class="text-center w-32 shrink-0">
+                            <canvas id="qrCanvas" class="mx-auto w-full h-auto"></canvas>
+                        </div>
                     </div>
+
                 </div>
             </div>
 

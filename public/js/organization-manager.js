@@ -1,5 +1,7 @@
 // Organization Management Class
 class OrganizationManager {
+    appCategoryEntries = {};
+
     constructor() {
         this.orgId = localStorage.getItem('qdrop_org_id');
         console.log('Stored org ID:', this.orgId);
@@ -84,6 +86,50 @@ class OrganizationManager {
         if (label) label.value = localStorage.getItem('label') || '';
         if (orgName) orgName.textContent = localStorage.getItem('org_name') || '';
         if (name) name.value = localStorage.getItem('user') || '';
+
+        this.validateOrgIdWithFirebase(this.orgId).then(snapshot => {
+            if (snapshot && snapshot.exists()) {
+                this.appCategoryEntries = snapshot.val().filters || {};
+                console.log('App categories:', this.appCategoryEntries);
+                this.setupDropdown(snapshot.val().apps || []);
+            }
+        });
+    }
+
+    setupDropdown(data) {
+        const button = document.getElementById('dropdownButton');
+        const menu = document.getElementById('dropdownMenu');
+        const selected = document.getElementById('selectedOption');
+        const list = document.getElementById('dropdownList');
+        const hiddenInput = document.getElementById('categoryInput');
+
+        list.innerHTML = '';
+
+        const appEntries = Object.entries(data || {});
+        if (appEntries.length === 0) {
+            list.innerHTML = `<li class="px-4 py-2 text-ij-text-dim">No apps found</li>`;
+        } else {
+            appEntries.forEach(([key, value]) => {
+                const li = document.createElement('li');
+                li.textContent = value;
+                li.dataset.key = key;
+                li.className = 'px-4 py-2 hover:bg-ij-bg-alt/60 cursor-pointer';
+                li.addEventListener('click', () => {
+                    selected.textContent = value;
+                    hiddenInput.value = value; 
+                    menu.classList.add('hidden');
+                });
+                list.appendChild(li);
+            });
+        }
+
+        button.addEventListener('click', () => {
+            menu.classList.toggle('hidden');
+        });
+
+        window.addEventListener('click', (e) => {
+            if (!button.contains(e.target)) menu.classList.add('hidden');
+        });
     }
 
     editOrg() {

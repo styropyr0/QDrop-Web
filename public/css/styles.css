@@ -126,6 +126,12 @@ html, body {
     animation: errorGlow 0.5s ease-out;
 }
 
+.jb-input.error-dropdown {
+    border-color: var(--ij-error) !important;
+    box-shadow: 0 0 0 3px rgba(255, 90, 103, 0.4), 0 0 15px rgba(255, 90, 103, 0.3) !important;
+    outline: none !important;
+}
+
 @keyframes errorGlow {
     0% { box-shadow: 0 0 0 3px rgba(245, 101, 101, 0.2), 0 0 10px rgba(245, 101, 101, 0.3); }
     50% { box-shadow: 0 0 0 5px rgba(245, 101, 101, 0.3), 0 0 20px rgba(245, 101, 101, 0.5); }

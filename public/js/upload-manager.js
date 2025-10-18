@@ -132,7 +132,7 @@ class UploadManager {
             let replacePrevious = false;
             let latestBuildKey = null;
             if (document.getElementById("replace_prev_check").checked) {
-                latestBuildKey = await this.getLatestBuildKey(formData.get('label')?.trim());
+                latestBuildKey = await this.getLatestBuildKey(formData.get('label')?.trim(), formData.get('version')?.trim());
                 replacePrevious = true;
             }
 
@@ -148,17 +148,21 @@ class UploadManager {
             const metadata = this.createMetadata(formData, apkUrl);
 
             let buildId = "";
-            if (!replacePrevious) {
+            if (!replacePrevious || latestBuildKey === null) {
                 buildId = await this.saveToFirebase(metadata);
             } else {
                 buildId = await this.updateBuildInFirebase(latestBuildKey, metadata);
                 buildId = latestBuildKey;
             }
 
+            let tags = [metadata.label, metadata.version];
+            await this.addTag(this.orgManager.orgId, tags);
+
             localStorage.setItem('label', metadata.label);
             localStorage.setItem('user', metadata.user);
             this.updateProgress(100, 'Upload complete!');
-            this.showStatus(`Build ${formData.get('version')?.trim()} uploaded successfully! Build ID: ${buildId}`, 'success');
+            this.showStatus(`Build ${formData.get('version')?.trim()} uploaded successfully!\nBuild ID: ${buildId}`, 'success');
+            this.setQRCode('qdrop://build?id=' + buildId);
 
             // Reset form
             this.resetForm(e.target);
@@ -185,16 +189,53 @@ class UploadManager {
             user: formData.get('user')?.trim(),
             fileName: formData.get('apkFile').name,
             fileSize: formData.get('apkFile').size,
-            isUpdate: document.getElementById("replace_prev_check").checked
+            category: formData.get('category')?.trim(),
+            isUpdate: document.getElementById("replace_prev_check").checked,
+            imageUrl: this.orgManager.appCategoryEntries[formData.get('category')?.trim()] || '',
         };
     }
 
-    async getLatestBuildKey(label) {
+    async addTag(orgId, tags) {
+        const tagsRef = database.ref(`organizations/${orgId}/tags`);
+
+        const tagKey1 = tags[0].toLowerCase();
+        const tagKey2 = "tttt_" + tags[1].replace(/\./g, '_');
+
+        const newTags = {
+            [tagKey1]: tags[0],
+            [tagKey2]: tags[1],
+        };
+
+        await tagsRef.update(newTags);
+    }
+
+    setQRCode(value) {
+        const qrContainer = document.getElementById("qrContainer");
+        const qrCanvas = document.getElementById("qrCanvas");
+
+        let qr;
+
+        qrContainer.classList.remove("hidden");
+
+        if (!qr) {
+            qr = new QRious({
+                element: qrCanvas,
+                size: 180,
+                level: 'M',
+                value: value
+            });
+        } else {
+            qr.value = value;
+        }
+
+        qrValue.textContent = value;
+    }
+
+    async getLatestBuildKey(label, version) {
         try {
-            // reference to this org’s builds
             const buildsRef = database.ref(`qa_builds/${this.orgManager.orgId}`);
 
-            // query builds with the given label
+            // First, query by label
             const snapshot = await buildsRef
                 .orderByChild("label")
                 .equalTo(label)
@@ -207,16 +248,20 @@ class UploadManager {
 
             snapshot.forEach(child => {
                 const val = child.val();
-                const uploadedAt = new Date(val.uploadedAt).getTime();
-                if (uploadedAt > latestTime) {
-                    latestTime = uploadedAt;
-                    latestKey = child.key;
+
+                // Check version as well
+                if (val.version === version) {
+                    const uploadedAt = new Date(val.uploadedAt).getTime();
+                    if (uploadedAt > latestTime) {
+                        latestTime = uploadedAt;
+                        latestKey = child.key;
+                    }
                 }
             });
 
             return latestKey;
         } catch (err) {
-            console.error("Error in getLatestBuildKey:", err);
+            console.error("Error in getLatestBuildKeyByLabelAndVersion:", err);
             return null;
         }
     }
@@ -328,7 +373,7 @@ class UploadManager {
 
         if (orgSection) orgSection.classList.remove('hidden');
         if (uploadSection) uploadSection.classList.remove('hidden');
-        if (orgField) orgField.value = this.orgId;
+        if (orgField) orgField.value = localStorage.getItem('qdrop_org_id') || '';
         if (label) label.value = localStorage.getItem('label') || '';
         if (orgName) orgName.textContent = localStorage.getItem('org_name') || '';
         if (name) name.value = localStorage.getItem('user') || '';
@@ -392,12 +437,13 @@ class UploadManager {
     }
 
     showStatus(message, type) {
+        const statusAndQr = document.getElementById('statusAndQr');
         const statusMessage = document.getElementById('statusMessage');
         const statusContent = document.getElementById('statusContent');
 
-        if (!statusMessage || !statusContent) return;
+        if (!statusAndQr || !statusMessage || !statusContent) return;
 
-        statusMessage.classList.remove('hidden');
+        statusAndQr.classList.remove('hidden');
 
         const colors = {
             success: 'bg-ij-success/10 border-ij-success text-ij-success',
@@ -406,8 +452,12 @@ class UploadManager {
             info: 'bg-ij-blue/10 border-ij-blue text-ij-blue'
         };
 
-        statusContent.className = `p-4 rounded-xl border-l-4 ${colors[type] || colors.info}`;
+        statusAndQr.className = `mt-6 flex items-start gap-6 p-4 rounded-xl border-l-4 ${colors[type] || colors.info}`;
+
+        statusMessage.className = "flex-1";
+        statusContent.className = "font-jetbrains";
         statusContent.textContent = message;
+        statusContent.style.whiteSpace = "pre-line";
     }
 
     validateForm(formData) {
@@ -416,12 +466,11 @@ class UploadManager {
         const label = formData.get('label')?.trim();
         const name = formData.get('user')?.trim();
         const changelog = formData.get('changelog')?.trim();
+        const category = formData.get('category')?.trim();
         const file = formData.get('apkFile');
 
-        // Clear previous error states
-        document.querySelectorAll('.jb-input').forEach(input => {
-            input.classList.remove('error');
-        });
+        document.querySelectorAll('.jb-input').forEach(input => input.classList.remove('error'));
+        document.getElementById('dropdownButton').classList.remove('error-dropdown');
 
         if (!version) {
             this.showFieldError('version');
@@ -443,6 +492,11 @@ class UploadManager {
             errors.push('APK file is required');
         }
 
+        if (!category) {
+            this.showDropdownError('dropdownButton');
+            errors.push('Application name is required');
+        }
+
         return errors.length === 0;
     }
 
@@ -452,9 +506,24 @@ class UploadManager {
 
         field.classList.add('error');
 
-        // Auto-remove error state after 3 seconds
+        setTimeout(() => field.classList.remove('error'), 3000);
+    }
+
+    showDropdownError(buttonId) {
+        const button = document.getElementById(buttonId);
+        if (!button) return;
+
+        const originalRingColor = getComputedStyle(button).getPropertyValue('--tw-ring-color');
+
+        button.style.setProperty('--tw-ring-color', 'rgba(255, 90, 103, 0.5)');
+        button.focus({ preventScroll: true });
+
+        button.style.borderColor = 'var(--ij-error)';
+
         setTimeout(() => {
-            field.classList.remove('error');
+            button.style.setProperty('--tw-ring-color', originalRingColor); 
+            button.style.borderColor = ''; 
+            button.blur();
         }, 3000);
     }
 }
