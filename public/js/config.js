@@ -9,13 +9,6 @@
 // Application Configuration
 const CONFIG = {
     // ------------------------
-    // Supabase Configuration
-    // Supabase is deprecated. It will be removed in future releases.
-    // ------------------------
-    SUPABASE_URL: 'https://YOUR_PROJECT_ID.supabase.co',
-    SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY', // Public key (safe for client-side use)
-    
-    // ------------------------
     // Firebase Configuration
     // ------------------------
     FIREBASE_CONFIG: {
@@ -32,7 +25,7 @@ const CONFIG = {
     // ------------------------
     // File Upload Settings
     // ------------------------
-    STORAGE_BUCKET: 'YOUR_SUPABASE_BUCKET_NAME',
+    STORAGE_BUCKET: 'YOUR_CLOUDFLARE_R2_BUCKET_NAME',
     MAX_FILE_SIZE: 100 * 1024 * 1024, // 100 MB
     ALLOWED_FILE_TYPES: ['.apk'],
 
@@ -49,12 +42,7 @@ const CONFIG = {
 // Service Initialization
 // =====================================
 
-let supabase, database;
-
-// Initialize Supabase
-if (typeof window !== 'undefined' && window.supabase) {
-    supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-}
+let database;
 
 // Initialize Firebase
 if (typeof firebase !== 'undefined') {

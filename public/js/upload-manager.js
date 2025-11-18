@@ -139,7 +139,7 @@ class UploadManager {
             this.setUploading(true);
             this.showProgress(true);
 
-            // Upload to Supabase
+            // Upload to Cloudflare R2
             this.updateProgress(10, 'Uploading APK file...');
             const apkUrl = await this.uploadToR2(formData.get('apkFile'), formData.get('version')?.trim());
 

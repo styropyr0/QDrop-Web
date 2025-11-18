@@ -73,9 +73,6 @@ These credentials are required for upload and metadata storage.
 
 ```js
 const CONFIG = {
-    SUPABASE_URL: 'https://YOUR_PROJECT_ID.supabase.co',
-    SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY',
-
     FIREBASE_CONFIG: {
         apiKey: "YOUR_FIREBASE_API_KEY",
         authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -87,7 +84,7 @@ const CONFIG = {
         measurementId: "YOUR_MEASUREMENT_ID"
     },
 
-    STORAGE_BUCKET: 'YOUR_SUPABASE_BUCKET_NAME',
+    STORAGE_BUCKET: 'YOUR_R2_BUCKET_NAME',
 
     MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB max upload
 
