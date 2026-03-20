@@ -139,6 +139,11 @@ class UploadManager {
             this.setUploading(true);
             this.showProgress(true);
 
+            if (replacePrevious && latestBuildKey) {
+                let deleted = await this.deleteBuilds(latestBuildKey);
+                if (!deleted) throw new Error('Failed to delete previous build. Upload aborted.');
+            }
+
             // Upload to Cloudflare R2
             this.updateProgress(10, 'Uploading APK file...');
             const apkUrl = await this.uploadToR2(formData.get('apkFile'), formData.get('version')?.trim());
@@ -193,6 +198,20 @@ class UploadManager {
             isUpdate: document.getElementById("replace_prev_check").checked,
             imageUrl: this.orgManager.appCategoryEntries[formData.get('category')?.trim()] || '',
         };
+    }
+
+    async deleteBuilds(buildId) {
+        try {
+            const response = await fetch('/api/delete-builds', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ buildIds: [buildId], organizationId: this.orgManager.orgId, update: true })
+            });
+            return true;
+        } catch (error) {
+            console.error('Error deleting build:', error);
+            return false;
+        }
     }
 
     async addTag(orgId, tags) {
@@ -521,8 +540,8 @@ class UploadManager {
         button.style.borderColor = 'var(--ij-error)';
 
         setTimeout(() => {
-            button.style.setProperty('--tw-ring-color', originalRingColor); 
-            button.style.borderColor = ''; 
+            button.style.setProperty('--tw-ring-color', originalRingColor);
+            button.style.borderColor = '';
             button.blur();
         }, 3000);
     }

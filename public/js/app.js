@@ -100,7 +100,7 @@ class QDropApp {
 
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
-            // Ctrl/Cmd + U to focus on upload
+            // Ctrl/Cmd + U to focus on upload file input
             if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
                 e.preventDefault();
                 const fileInput = document.getElementById('apkFile');
