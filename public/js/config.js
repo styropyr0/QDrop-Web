@@ -45,7 +45,7 @@ const CONFIG = {
 let database;
 
 // Initialize Firebase
-if (typeof firebase !== 'undefined') {
+if (typeof window !== "undefined" && typeof firebase !== "undefined") {
     firebase.initializeApp(CONFIG.FIREBASE_CONFIG);
     database = firebase.database();
 }
@@ -53,6 +53,6 @@ if (typeof firebase !== 'undefined') {
 // =====================================
 // Export config (for modular usage)
 // =====================================
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== "undefined" && module.exports) {
     module.exports = CONFIG;
 }
