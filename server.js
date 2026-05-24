@@ -358,7 +358,7 @@ function generateBuildPageHTML(req, build, orgId, buildId, orgName) {
     }
 
     return renderStandalonePage(
-        `${build.category} - QDrop Build`,
+        `${build.category} (${build.version}) - QDrop Build`,
         `${orgName}`,
         `Build Details`,
         `
@@ -854,6 +854,50 @@ app.get('/manifest/:orgId/:buildId', async (req, res) => {
     }
 });
 
+function getTagKeysForBuild(buildData) {
+    const tagKeys = new Set();
+
+    if (buildData?.label) {
+        tagKeys.add(String(buildData.label).toLowerCase());
+    }
+
+    if (buildData?.version) {
+        const normalizedVersion = String(buildData.version).replace(/\./g, '_');
+        tagKeys.add(`tttt_${normalizedVersion}`);
+    }
+
+    return tagKeys;
+}
+
+async function cleanupOrphanedTags(db, organizationId) {
+    const buildsSnapshot = await db.ref(`qa_builds/${organizationId}`).once('value');
+    const tagsSnapshot = await db.ref(`organizations/${organizationId}/tags`).once('value');
+
+    const activeTagKeys = new Set();
+
+    buildsSnapshot.forEach(buildSnapshot => {
+        const buildData = buildSnapshot.val() || {};
+        const tagKeys = getTagKeysForBuild(buildData);
+
+        tagKeys.forEach(tagKey => activeTagKeys.add(tagKey));
+    });
+
+    const existingTags = tagsSnapshot.val() || {};
+    const removals = {};
+
+    Object.keys(existingTags).forEach(tagKey => {
+        if (!activeTagKeys.has(tagKey)) {
+            removals[tagKey] = null;
+        }
+    });
+
+    if (Object.keys(removals).length > 0) {
+        await db.ref(`organizations/${organizationId}/tags`).update(removals);
+    }
+
+    return Object.keys(removals);
+}
+
 // API for deleting builds
 app.post('/api/delete-builds', async (req, res) => {
     try {
@@ -1009,6 +1053,14 @@ app.post('/api/delete-builds', async (req, res) => {
         console.log(
             `Deletion complete: ${deletedCount} deleted, ${failedCount} failed`
         );
+
+        if (!update) {
+            const removedTagKeys = await cleanupOrphanedTags(db, organizationId);
+
+            console.log(
+                `Removed ${removedTagKeys.length} orphaned tags for org: ${organizationId}`
+            );
+        }
 
         res.json({
             success: true,
