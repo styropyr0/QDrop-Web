@@ -39,10 +39,10 @@ A companion mobile app is also open source:
 *Preview iOS build artifacts and related metadata*
 
 ![iOS QR code](screenshots/ipa_builds_qr.png)
-*Share an installable iOS URL using the generated QR code*
+*QR Codes for builds make sharing and opening builds easier*
 
 ![Shareable URL](screenshots/public_shareable_url.png)
-*Copy a public shareable link for the build*
+*Public shareable URLs for builds. Automatically generated if set on ENV*
 
 ## Project structure
 
