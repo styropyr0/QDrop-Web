@@ -1,154 +1,175 @@
-# QDrop Web App
+# QDrop Web
 
-QDrop is an open-source web application designed to help developers upload and manage their QA builds efficiently.
-It provides a clean, intuitive interface to upload APK files along with metadata such as version, label, and changelog.
-Uploaded APKs are securely hosted on **Cloudflare R2**, and their metadata is stored in **Firebase Realtime Database**.
-
----
+QDrop is an open-source web app for managing QA builds and distributing Android/iOS artifacts to your team.
+The current implementation serves a browser UI, generates presigned Cloudflare R2 upload URLs, and exposes lightweight server routes for download metadata and install pages.
 
 ## Mobile App
 
-A Jetpack Compose-based Android app that works alongside this web app for managing QA builds is also open source:
-[Mobile App](https://github.com/styropyr0/QDrop-App)
+A companion mobile app is also open source:
+[QDrop App](https://github.com/styropyr0/QDrop-App)
 
----
+## What it does
+
+- Upload APK files through the web UI with progress feedback
+- Organize uploads by organization ID
+- Store build metadata in Firebase Realtime Database
+- Store binaries in Cloudflare R2
+- Generate presigned upload URLs for secure direct uploads
+- Render a public downloads page and install-related pages from backend metadata
+- Support local development with a small Express server
 
 ## Screenshots
 
-![Enter the organization](screenshots/enter_org.png)
-*Enter the unique organization ID to upload builds*
-
 ![Upload build](screenshots/upload_build.png)
-*Provide version, label, changelog, and upload the build*
+*Upload a build from the main dashboard*
 
-![Upload progress](screenshots/uploading.png)
-*View real-time upload progress and status*
+![Upload build details](screenshots/upload_build_2.png)
+*Add version, label, changelog, and other upload details*
 
-![After successful upload](screenshots/upload_complete.png)
-*See confirmation, Build ID, and QR code for direct access*
+![Uploading build](screenshots/uploading_build.png)
+*Track upload progress while files are being sent*
 
----
+![Build upload success](screenshots/build_upload_success.png)
+*Confirm a successful upload and review the build details*
 
-## Features
+![Manage builds](screenshots/manage_builds.png)
+*Browse and manage stored builds in the app*
 
-* Upload APK files (up to 100 MB) via drag & drop or file browser
-* Display of upload progress and live status
-* Generate Build ID and QR code for direct download
-* Add version, label, and detailed changelog for each build
-* Option to replace a previous build
-* Organize uploads using unique organization IDs
-* Store APKs on **Cloudflare R2**
-* Save metadata in **Firebase Realtime Database**
-* Sleek dark theme with gradient design and responsive layout
-* Input validation and improved error/success notifications
-* Open-source and easy to customize
+![iOS builds](screenshots/ipa_builds.png)
+*Preview iOS build artifacts and related metadata*
 
----
+![iOS QR code](screenshots/ipa_builds_qr.png)
+*Share an installable iOS URL using the generated QR code*
 
-## Project Structure
+![Shareable URL](screenshots/public_shareable_url.png)
+*Copy a public shareable link for the build*
+
+## Project structure
 
 ```
-public/
-  ├── css/
-  │    └── styles.css              # App styles
-  ├── js/
-  │    ├── app.js                  # Main app logic
-  │    ├── config.js               # Configuration (API keys, endpoints, etc.)
-  │    ├── organization-manager.js # Handles organization switching
-  │    └── upload-manager.js       # Handles upload and progress logic
-  ├── index.html                   # Main web interface
-.gitignore
-LICENSE
-package.json                       # Project dependencies
-README.md
-server.js                          # Optional local hosting server
+.
+├── public/
+│   ├── css/styles.css
+│   ├── js/
+│   │   ├── app.js
+│   │   ├── builds-manager.js
+│   │   ├── config.js
+│   │   ├── ios-installer.js
+│   │   ├── organization-manager.js
+│   │   ├── side-panel.js
+│   │   ├── sidebar-navigation.js
+│   │   ├── storage-analytics.js
+│   │   └── upload-manager.js
+│   └── index.html
+├── screenshots/
+├── .env
+├── .gitignore
+├── LICENSE
+├── package.json
+├── README.md
+├── server.js
+├── serviceAccountKey.json
 ```
 
----
+## Current stack
+
+- **Frontend:** static HTML/CSS/JS under `public/`
+- **Backend:** Node.js + Express
+- **Storage:** Cloudflare R2 for build binaries
+- **Database:** Firebase Realtime Database / Firebase Admin SDK
+- **Auth/SDKs:** AWS S3 client for presigned upload URLs, Firebase Admin
 
 ## Configuration
 
-Before running QDrop, edit `public/js/config.js` with your **Cloudflare R2** and **Firebase** credentials.
-These credentials are required for upload and metadata storage.
+### 1. Frontend config
+
+Update `public/js/config.js` with your Firebase values and bucket naming defaults.
+This file is still used as a template and as a shared config export for the server.
 
 ```js
 const CONFIG = {
-    FIREBASE_CONFIG: {
-        apiKey: "YOUR_FIREBASE_API_KEY",
-        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-        databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.REGION.firebasedatabase.app",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT_ID.appspot.com",
-        messagingSenderId: "YOUR_SENDER_ID",
-        appId: "YOUR_APP_ID",
-        measurementId: "YOUR_MEASUREMENT_ID"
-    },
-
-    STORAGE_BUCKET: 'YOUR_R2_BUCKET_NAME',
-
-    MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB max upload
-
-    ALLOWED_FILE_TYPES: ['.apk'],
-
-    GITHUB: {
-        USERNAME: 'YOUR_GITHUB_USERNAME',
-        REPOSITORY: 'YOUR_GITHUB_REPOSITORY'
-    }
+  FIREBASE_CONFIG: {
+    apiKey: 'YOUR_FIREBASE_API_KEY',
+    authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
+    databaseURL: 'https://YOUR_PROJECT_ID-default-rtdb.REGION.firebasedatabase.app',
+    projectId: 'YOUR_PROJECT_ID',
+    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+    messagingSenderId: 'YOUR_SENDER_ID',
+    appId: 'YOUR_APP_ID',
+    measurementId: 'YOUR_MEASUREMENT_ID'
+  },
+  STORAGE_BUCKET: 'YOUR_CLOUDFLARE_R2_BUCKET_NAME',
+  MAX_FILE_SIZE: 100 * 1024 * 1024,
+  ALLOWED_FILE_TYPES: ['.apk'],
+  GITHUB: {
+    USERNAME: 'YOUR_GITHUB_USERNAME',
+    REPOSITORY: 'YOUR_GITHUB_REPOSITORY'
+  }
 };
 ```
 
----
+### 2. Environment variables
 
-## How to Run
+The server reads its runtime secrets from `.env` and uses them for Cloudflare R2 and the local server port.
+
+```env
+CLOUDFLARE_ACCOUNT_ID=<your cloudflare account id>
+R2_ACCESS_KEY_ID=<your r2 access key id>
+R2_SECRET_ACCESS_KEY=<your r2 secret access key>
+R2_BUCKET_NAME=<your r2 bucket name>
+PUBLIC_DEV_URL=<your_dev_url>
+PORT=3000
+```
+
+### 3. Firebase Admin credentials
+
+`server.js` initializes Firebase Admin with `serviceAccountKey.json`.
+Keep that file private and do **not** commit real credentials to a public repository.
+
+## Run locally
 
 ### Prerequisites
 
-* [Node.js](https://nodejs.org/) installed
-* Firebase project with Realtime Database enabled
-* Cloudflare R2 bucket created and configured for S3-compatible access
+- [Node.js](https://nodejs.org/)
+- A Firebase project with Realtime Database enabled
+- A Cloudflare R2 bucket configured for S3-compatible access
 
-### Steps
+### Install and start
 
-1. **Fork** the repository on GitHub
-2. **Clone** it locally:
+```bash
+npm install
+npm run dev
+```
 
-   ```bash
-   git clone https://github.com/YOUR_GITHUB_USERNAME/QDrop-Web.git
-   cd qdrop-web
-   ```
-3. **Install dependencies:**
+The app serves on `http://localhost:3000` by default (or the port from `.env`).
 
-   ```bash
-   npm install
-   ```
-4. **Update credentials** in `public/js/config.js`
-5. **Start the server (optional for local testing):**
+### Available scripts
 
-   ```bash
-   node server.js
-   ```
-6. **Open your browser:**
-   [http://localhost:3000](http://localhost:3000)
+```json
+"scripts": {
+  "dev": "node server.js",
+  "start": "node server.js"
+}
+```
 
----
+## Notes on current behavior
 
-## Security Recommendations
+- The server exposes `/api/upload-url` for presigned upload URLs.
+- The server also exposes `/api/storage-info` for storage usage information.
+- The `/downloads` route renders metadata from Firebase under `app_update`.
+- The frontend expects a valid Firebase runtime and your Cloudflare R2 configuration to be present.
 
-* Never expose Cloudflare R2 or Firebase keys publicly
-* Use environment variables or secret-management tools for production
-* Configure secure Firebase Realtime Database rules
-* Set R2 bucket permissions to allow only required operations (e.g., `PutObject`, `GetObject`)
-* Avoid committing any sensitive credentials to GitHub
+## Security recommendations
 
----
+- Do not commit real Firebase Admin credentials or R2 keys.
+- Use `.env` locally and a secrets manager in production.
+- Keep Firebase Realtime Database rules locked down.
+- Restrict R2 permissions to the operations your app actually needs.
 
 ## Contributing
 
-Contributions are welcome!
-Fork the repository, make improvements, and submit a pull request.
-Please keep all private keys and secrets out of your commits.
-
----
+Contributions are welcome. Fork the repo, make the improvement, and open a pull request.
+Please keep secrets out of the commit history.
 
 ## License
 
