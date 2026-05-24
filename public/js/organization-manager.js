@@ -358,11 +358,11 @@ class OrganizationManager {
                             </svg>
                         </div>
                     </div>
-                    <div class="flex-1">
+                    <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between gap-4">
-                            <div class="font-medium text-ij-text">${appName}</div>
+                            <div class="font-medium text-ij-text truncate">${appName}</div>
                         </div>
-                        <div class="text-xs text-ij-text-dim">Icon: ${icon || 'not set'}</div>
+                        <div class="text-xs text-ij-text-dim truncate">${icon || 'not set'}</div>
                     </div>
                     <div class="flex gap-2">
                         <button class="edit-app-btn text-sm px-3 py-1 rounded-lg bg-ij-blue/20 text-ij-blue hover:bg-ij-blue/30" data-app-key="${key}" data-app-name="${appName}" data-icon-url="${icon}">Edit</button>

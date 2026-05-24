@@ -4,19 +4,22 @@ class QDropApp {
         this.orgManager = null;
         this.uploadManager = null;
         this.init();
+
+        window.showQR = this.showQR.bind(this);
+        window.closeQR = this.closeQR.bind(this);
     }
 
     init() {
         document.addEventListener('DOMContentLoaded', () => {
             console.log('QDrop Dashboard initializing...');
-            
+
             // Initialize managers
             this.orgManager = new OrganizationManager();
             this.uploadManager = new UploadManager(this.orgManager);
-            
+
             // Setup event listeners
             this.setupEventListeners();
-            
+
             console.log('QDrop dashboard initialized successfully!');
         });
     }
@@ -24,12 +27,30 @@ class QDropApp {
     setupEventListeners() {
         // Organization modal handlers
         this.setupOrganizationModalHandlers();
-        
+
         // Organization editing handlers
         this.setupOrganizationEditHandlers();
-        
+
         // Keyboard shortcuts
         this.setupKeyboardShortcuts();
+    }
+
+    showQR(url) {
+        new QRious({
+            element: document.getElementById('qrModalCanvas'),
+            value: url,
+            size: 200,
+            background: '#ffffff',
+            foreground: '#000000'
+        });
+        document.getElementById('qrLink').textContent = url;
+        document.getElementById('qrModal').classList.remove('hidden');
+        document.getElementById('qrModal').classList.add('flex');
+    }
+
+    closeQR() {
+        document.getElementById('qrModal').classList.add('hidden');
+        document.getElementById('qrModal').classList.remove('flex');
     }
 
     setupOrganizationModalHandlers() {
@@ -106,7 +127,7 @@ class QDropApp {
                 const fileInput = document.getElementById('apkFile');
                 if (fileInput) fileInput.click();
             }
-            
+
             // Escape to close modal
             if (e.key === 'Escape') {
                 const modal = document.getElementById('orgModal');

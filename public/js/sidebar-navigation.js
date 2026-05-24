@@ -5,6 +5,7 @@ class SidebarNavigation {
         this.views = document.querySelectorAll('.view');
         this.collapseToggle = document.getElementById('collapseToggle');
         this.mobileToggle = document.getElementById('mobileToggle');
+        this.backdrop = document.getElementById('sidebarBackdrop');
         this.isCollapsed = false;
         this.isMobileOpen = false;
 
@@ -14,17 +15,46 @@ class SidebarNavigation {
     init() {
         this.loadCollapsedState();
         this.setupEventListeners();
+        this.handleURLRouting();
+    }
+
+    handleURLRouting() {
+        const pathname = window.location.pathname;
+        let targetView = 'upload';
+
+        if (pathname.includes('ipaBuilds')) {
+            targetView = 'ipaBuilds';
+        } else if (pathname.includes('apps')) {
+            targetView = 'apps';
+        } else if (pathname.includes('manage')) {
+            targetView = 'manage';
+        } else if (pathname.includes('about')) {
+            targetView = 'about';
+        }
+
+        if (targetView !== 'upload') {
+            this.switchView(targetView);
+        }
+    }
+
+    isMobile() {
+        return window.innerWidth <= 768;
     }
 
     setupEventListeners() {
         // Navigation items
         this.navItems.forEach(item => {
-            item.addEventListener('click', () => this.switchView(item.dataset.view));
+            item.addEventListener('click', () => {
+                this.switchView(item.dataset.view);
+                if (this.isMobile()) this.closeMobile();
+            });
         });
 
-        // Collapse toggle
+        // Collapse toggle — desktop only
         if (this.collapseToggle) {
-            this.collapseToggle.addEventListener('click', () => this.toggleCollapse());
+            this.collapseToggle.addEventListener('click', () => {
+                if (!this.isMobile()) this.toggleCollapse();
+            });
         }
 
         // Mobile toggle
@@ -32,48 +62,28 @@ class SidebarNavigation {
             this.mobileToggle.addEventListener('click', () => this.toggleMobile());
         }
 
-        // Close sidebar on view change on mobile
-        if (window.innerWidth <= 768) {
-            this.navItems.forEach(item => {
-                item.addEventListener('click', () => this.closeMobile());
-            });
+        // Backdrop tap to dismiss
+        if (this.backdrop) {
+            this.backdrop.addEventListener('click', () => this.closeMobile());
         }
 
         // Handle window resize
         window.addEventListener('resize', () => {
-            if (window.innerWidth > 768) {
+            if (!this.isMobile()) {
                 this.closeMobile();
             }
         });
     }
 
     switchView(viewName) {
-        console.log(`[v0] Switching to view: ${viewName}`);
-
-        // Update nav items
         this.navItems.forEach(item => {
-            if (item.dataset.view === viewName) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
+            item.classList.toggle('active', item.dataset.view === viewName);
         });
 
-        // Update views
         this.views.forEach(view => {
-            if (view.id === `${viewName}View`) {
-                view.classList.add('active');
-            } else {
-                view.classList.remove('active');
-            }
+            view.classList.toggle('active', view.id === `${viewName}View`);
         });
 
-        // Close mobile sidebar
-        if (window.innerWidth <= 768) {
-            this.closeMobile();
-        }
-
-        // Trigger any view-specific initialization
         this.triggerViewEvent(viewName);
     }
 
@@ -84,28 +94,28 @@ class SidebarNavigation {
 
     toggleCollapse() {
         this.isCollapsed = !this.isCollapsed;
-        if (this.isCollapsed) {
-            this.sidebar.classList.add('collapsed');
-        } else {
-            this.sidebar.classList.remove('collapsed');
-        }
+        this.sidebar.classList.toggle('collapsed', this.isCollapsed);
         this.saveCollapsedState();
     }
 
     toggleMobile() {
-        this.isMobileOpen = !this.isMobileOpen;
         if (this.isMobileOpen) {
-            this.sidebar.classList.add('active');
+            this.closeMobile();
         } else {
-            this.sidebar.classList.remove('active');
+            this.openMobile();
         }
+    }
+
+    openMobile() {
+        this.isMobileOpen = true;
+        this.sidebar.classList.add('mobile-open');
+        if (this.backdrop) this.backdrop.classList.add('active');
     }
 
     closeMobile() {
         this.isMobileOpen = false;
-        if (this.sidebar) {
-            this.sidebar.classList.remove('active');
-        }
+        this.sidebar.classList.remove('mobile-open');
+        if (this.backdrop) this.backdrop.classList.remove('active');
     }
 
     saveCollapsedState() {
@@ -113,6 +123,7 @@ class SidebarNavigation {
     }
 
     loadCollapsedState() {
+        if (this.isMobile()) return;
         const saved = localStorage.getItem('sidebar-collapsed');
         if (saved) {
             this.isCollapsed = JSON.parse(saved);
@@ -123,7 +134,6 @@ class SidebarNavigation {
     }
 }
 
-// Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         window.sidebarNav = new SidebarNavigation();

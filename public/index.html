@@ -38,15 +38,50 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css">
 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+
+    <style>
+        @media (max-width: 767px) {
+            .view-container {
+                padding: 0.5rem !important;
+                padding-top: 4.5rem !important;
+            }
+
+            .content-container {
+                padding: 0.25rem !important;
+            }
+
+            .jb-card {
+                overflow: hidden;
+            }
+
+            .jb-input {
+                min-width: 0;
+                max-width: 100%;
+            }
+        }
+
+        .app-icon-url {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+            display: block;
+        }
+    </style>
 </head>
 
 <body class="ij-gradient-bg text-ij-text font-inter">
     <div class="app-container">
+
+
+        <div id="sidebarBackdrop"
+            class="fixed inset-0 bg-black/50 z-40 md:hidden pointer-events-none opacity-0 transition-opacity duration-300">
+        </div>
 
         <!-- ===================== SIDEBAR ===================== -->
         <aside id="sidebar" class="sidebar">
@@ -59,10 +94,17 @@
                         </svg>
                     </div>
                     <div class="sidebar-text">
-                        <span class="sidebar-title">
-                            Q<span
-                                class="bg-gradient-to-r from-ij-blue via-ij-purple to-ij-pink bg-clip-text text-transparent">Drop</span>
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <span class="sidebar-title">
+                                Q<span
+                                    class="bg-gradient-to-r from-ij-blue via-ij-purple to-ij-pink bg-clip-text text-transparent">Drop</span>
+                            </span>
+
+                            <span
+                                class="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-ij-text-dim">
+                                1.0.5
+                            </span>
+                        </div>
                     </div>
                 </div>
                 <p class="sidebar-subtitle mt-2">
@@ -74,9 +116,14 @@
 
             <nav class="sidebar-nav">
                 <div class="nav-item active" data-view="upload">
-                    <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    <svg class="nav-item-icon" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M12.5535 2.49392C12.4114 2.33852 12.2106 2.25 12 2.25C11.7894 2.25 11.5886 2.33852 11.4465 2.49392L7.44648 6.86892C7.16698 7.17462 7.18822 7.64902 7.49392 7.92852C7.79963 8.20802 8.27402 8.18678 8.55352 7.88108L11.25 4.9318V16C11.25 16.4142 11.5858 16.75 12 16.75C12.4142 16.75 12.75 16.4142 12.75 16V4.9318L15.4465 7.88108C15.726 8.18678 16.2004 8.20802 16.5061 7.92852C16.8118 7.64902 16.833 7.17462 16.5535 6.86892L12.5535 2.49392Z"
+                            fill="currentColor" />
+                        <path
+                            d="M3.75 15C3.75 14.5858 3.41422 14.25 3 14.25C2.58579 14.25 2.25 14.5858 2.25 15V15.0549C2.24998 16.4225 2.24996 17.5248 2.36652 18.3918C2.48754 19.2919 2.74643 20.0497 3.34835 20.6516C3.95027 21.2536 4.70814 21.5125 5.60825 21.6335C6.47522 21.75 7.57754 21.75 8.94513 21.75H15.0549C16.4225 21.75 17.5248 21.75 18.3918 21.6335C19.2919 21.5125 20.0497 21.2536 20.6517 20.6516C21.2536 20.0497 21.5125 19.2919 21.6335 18.3918C21.75 17.5248 21.75 16.4225 21.75 15.0549V15C21.75 14.5858 21.4142 14.25 21 14.25C20.5858 14.25 20.25 14.5858 20.25 15C20.25 16.4354 20.2484 17.4365 20.1469 18.1919C20.0482 18.9257 19.8678 19.3142 19.591 19.591C19.3142 19.8678 18.9257 20.0482 18.1919 20.1469C17.4365 20.2484 16.4354 20.25 15 20.25H9C7.56459 20.25 6.56347 20.2484 5.80812 20.1469C5.07435 20.0482 4.68577 19.8678 4.40901 19.591C4.13225 19.3142 3.9518 18.9257 3.85315 18.1919C3.75159 17.4365 3.75 16.4354 3.75 15Z"
+                            fill="currentColor" />
                     </svg>
                     <span class="nav-item-label">Upload Build</span>
                 </div>
@@ -93,6 +140,17 @@
                             d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                     <span class="nav-item-label">Apps Management</span>
+                </div>
+                <div class="nav-item" data-view="ipaBuilds">
+                    <svg class="nav-item-icon" width="24" height="24" viewBox="-1.5 0 20 20" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <g fill="currentColor">
+                            <path
+                                d="M57.5708873,7282.19296 C58.2999598,7281.34797 58.7914012,7280.17098 58.6569121,7279 C57.6062792,7279.04 56.3352055,7279.67099 55.5818643,7280.51498 C54.905374,7281.26397 54.3148354,7282.46095 54.4735932,7283.60894 C55.6455696,7283.69593 56.8418148,7283.03894 57.5708873,7282.19296 M60.1989864,7289.62485 C60.2283111,7292.65181 62.9696641,7293.65879 63,7293.67179 C62.9777537,7293.74279 62.562152,7295.10677 61.5560117,7296.51675 C60.6853718,7297.73474 59.7823735,7298.94772 58.3596204,7298.97372 C56.9621472,7298.99872 56.5121648,7298.17973 54.9134635,7298.17973 C53.3157735,7298.17973 52.8162425,7298.94772 51.4935978,7298.99872 C50.1203933,7299.04772 49.0738052,7297.68074 48.197098,7296.46676 C46.4032359,7293.98379 45.0330649,7289.44985 46.8734421,7286.3899 C47.7875635,7284.87092 49.4206455,7283.90793 51.1942837,7283.88393 C52.5422083,7283.85893 53.8153044,7284.75292 54.6394294,7284.75292 C55.4635543,7284.75292 57.0106846,7283.67793 58.6366882,7283.83593 C59.3172232,7283.86293 61.2283842,7284.09893 62.4549652,7285.8199 C62.355868,7285.8789 60.1747177,7287.09489 60.1989864,7289.62485"
+                                transform="translate(-46, -7279)" />
+                        </g>
+                    </svg>
+                    <span class="nav-item-label">iOS Builds</span>
                 </div>
                 <div class="nav-item" data-view="about">
                     <svg class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,27 +190,37 @@
             <div class="view-container">
 
                 <!-- Mobile Sidebar Toggle -->
-                <button id="mobileToggle" class="mobile-toggle md:hidden" aria-label="Open menu">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                </button>
+                <header class="mobile-topbar md:hidden">
+                    <div class="mobile-topbar-brand">
+                        <div class="mobile-topbar-logo">
+                            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                            </svg>
+                        </div>
+                        <span class="mobile-topbar-title">Q<span class="mobile-topbar-gradient">Drop</span></span>
+                    </div>
+                    <button id="mobileToggle" class="mobile-menu-btn" aria-label="Open menu">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </header>
 
                 <div class="content-container">
 
                     <!-- ===== UPLOAD VIEW ===== -->
                     <div id="uploadView" class="view active w-full">
                         <div class="max-w-5xl">
-                            <h1 class="text-3xl font-bold text-ij-text mb-2">Upload Build</h1>
-                            <p class="text-ij-text-dim mb-8">Submit a new APK build for your team to download and test.
-                            </p>
-                            <div class="jb-card rounded-2xl p-8 relative overflow-hidden">
+                            <h1 class="text-2xl md:text-3xl font-bold text-ij-text mb-1 md:mb-2">Upload Build</h1>
+                            <p class="text-ij-text-dim mb-4 md:mb-8 text-sm md:text-base">Submit a new build for your
+                                team to download and test.</p>
+                            <div class="jb-card rounded-2xl p-4 md:p-8 relative overflow-hidden">
 
                                 <!-- Organization Section -->
-                                <div id="orgSection" class="mb-6 hidden">
-                                    <div class="flex items-center justify-between mb-4">
-                                        <div class="flex items-center space-x-3">
+                                <div id="orgSection" class="mb-4 md:mb-6 hidden">
+                                    <div class="flex items-center justify-between mb-3 md:mb-4">
+                                        <div class="flex items-center space-x-3 min-w-0">
                                             <div
                                                 class="w-8 h-8 rounded-lg bg-gradient-to-br from-ij-orange to-ij-pink flex items-center justify-center flex-shrink-0">
                                                 <svg class="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg"
@@ -163,18 +231,18 @@
                                                         d="M100 666.67c0 17.68 7.02 34.63 19.53 47.14 12.5 12.5 29.46 19.52 47.14 19.52h125c6.63 0 12.99-2.63 17.67-7.32 4.7-4.69 7.33-11.05 7.33-17.68v-75h100v75c0 13.8 11.2 25 25 25h125c3.06 0 6.1-0.2 9.06-0.6 1.82 0.4 3.68 0.6 5.54 0.6h135.4c17.68 0 34.63-7.02 47.14-19.52 12.5-12.5 19.52-29.46 19.52-47.14V412.5c0-10.35-2.4-20.56-7.04-29.81-4.62-9.26-11.34-17.31-19.62-23.52l-33.34-25c-2.62-1.97-5.61-3.4-8.8-4.22-3.17-0.82-6.48-1-9.73-0.53-3.25 0.46-6.38 1.56-9.2 3.23-2.83 1.68-5.3 3.89-7.27 6.52-1.97 2.62-3.4 5.61-4.22 8.8-0.8 3.17-0.99 6.48-0.52 9.73 0.46 3.25 1.56 6.38 3.23 9.2 1.67 2.83 3.89 5.3 6.51 7.27l33.34 25c2.07 1.55 3.75 3.56 4.9 5.88 1.16 2.31 1.76 4.86 1.76 7.45v254.17c0 4.42-1.75 8.66-4.88 11.78-3.12 3.13-7.36 4.88-11.78 4.88h-85.44c1.37-5.33 2.1-10.9 2.1-16.66V100c0-17.68-7.02-34.64-19.52-47.14s-29.46-19.53-47.14-19.53h-400c-17.68 0-34.64 7.03-47.14 19.53S100 82.32 100 100v566.67Zm66.67 16.66c-4.42 0-8.66-1.75-11.79-4.88-3.12-3.12-4.88-7.36-4.88-11.78V100c0-4.42 1.76-8.66 4.88-11.79 3.13-3.12 7.37-4.88 11.79-4.88h400c4.42 0 8.66 1.76 11.78 4.88 3.13 3.13 4.88 7.37 4.88 11.79v566.67c0 4.42-1.75 8.66-4.88 11.78-3.12 3.13-7.36 4.88-11.78 4.88h-100v-75c0-6.63-2.64-12.99-7.33-17.67-4.68-4.7-11.04-7.33-17.67-7.33h-150c-6.63 0-13 2.64-17.68 7.33-4.69 4.68-7.32 11.04-7.32 17.67v75h-100Z" />
                                                 </svg>
                                             </div>
-                                            <h3 class="text-lg font-semibold text-ij-text">
+                                            <h3 class="text-base md:text-lg font-semibold text-ij-text truncate">
                                                 <span id="orgName">Org name</span>
                                             </h3>
                                         </div>
                                         <button id="changeOrgBtn"
-                                            class="text-sm text-ij-blue hover:text-ij-blue-light transition-colors">
+                                            class="text-sm text-ij-blue hover:text-ij-blue-light transition-colors flex-shrink-0 ml-2">
                                             Change
                                         </button>
                                     </div>
                                     <div class="relative">
                                         <input type="text" id="orgIdField"
-                                            class="jb-input w-full px-4 py-3 rounded-xl text-ij-text font-jetbrains pr-12"
+                                            class="jb-input w-full px-4 py-3 rounded-xl text-ij-text font-jetbrains pr-12 text-sm"
                                             readonly>
                                         <button id="editOrgBtn"
                                             class="absolute right-3 top-1/2 transform -translate-y-1/2 text-ij-text-dim hover:text-ij-text transition-colors">
@@ -196,7 +264,7 @@
                                                 Version <span class="text-ij-error">*</span>
                                             </label>
                                             <input type="text" id="version" name="version" placeholder="e.g., 1.0.3"
-                                                class="jb-input w-full px-4 py-3 rounded-xl placeholder-ij-text-dim font-jetbrains text-lg">
+                                                class="jb-input w-full px-4 py-3 rounded-xl placeholder-ij-text-dim font-jetbrains text-base md:text-lg">
                                         </div>
 
                                         <!-- Label -->
@@ -205,8 +273,8 @@
                                                 Label <span class="text-ij-error">*</span>
                                             </label>
                                             <input type="text" id="labelField" name="label"
-                                                placeholder="e.g., Development, Staging, Production"
-                                                class="jb-input w-full px-4 py-3 rounded-xl placeholder-ij-text-dim font-jetbrains text-lg">
+                                                placeholder="e.g., Development, Staging"
+                                                class="jb-input w-full px-4 py-3 rounded-xl placeholder-ij-text-dim font-jetbrains text-base md:text-lg">
                                         </div>
 
                                         <!-- User -->
@@ -215,7 +283,7 @@
                                                 User <span class="text-ij-error">*</span>
                                             </label>
                                             <input type="text" id="userField" name="user" placeholder="Your name"
-                                                class="jb-input w-full px-4 py-3 rounded-xl placeholder-ij-text-dim font-jetbrains text-lg">
+                                                class="jb-input w-full px-4 py-3 rounded-xl placeholder-ij-text-dim font-jetbrains text-base md:text-lg">
                                         </div>
 
                                         <!-- Changelog -->
@@ -223,13 +291,13 @@
                                             <label for="changelog" class="block text-sm font-medium text-ij-text mb-2">
                                                 Changelog
                                             </label>
-                                            <textarea id="changelog" name="changelog" rows="4"
-                                                placeholder="• Fixed critical authentication bug&#10;• Added new dashboard features&#10;• Improved performance by 25%&#10;• Updated dependencies"
+                                            <textarea id="changelog" name="changelog" rows="3"
+                                                placeholder="• Bug fixes&#10;• New features&#10;• Improvements"
                                                 class="jb-input w-full px-4 py-3 rounded-xl placeholder-ij-text-dim resize-none"></textarea>
                                         </div>
 
                                         <!-- Application dropdown -->
-                                        <div id="categoryDropdown" class="relative mb-18">
+                                        <div id="categoryDropdown" class="relative">
                                             <label for="categoryInput"
                                                 class="block text-sm font-medium text-ij-text mb-2 font-jetbrains">
                                                 Application <span class="text-ij-error">*</span>
@@ -237,9 +305,9 @@
                                             <input type="hidden" id="categoryInput" name="category">
                                             <button id="dropdownButton" type="button"
                                                 class="jb-input w-full px-4 py-3 rounded-xl bg-transparent border border-ij-border text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-ij-accent font-jetbrains">
-                                                <span id="selectedOption">Select the application</span>
-                                                <svg class="w-4 h-4 text-ij-text-dim" fill="none" viewBox="0 0 24 24"
-                                                    stroke="currentColor">
+                                                <span id="selectedOption" class="truncate">Select the application</span>
+                                                <svg class="w-4 h-4 text-ij-text-dim flex-shrink-0 ml-2" fill="none"
+                                                    viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round"
                                                         stroke-width="2" d="M19 9l-7 7-7-7" />
                                                 </svg>
@@ -250,29 +318,32 @@
                                             </div>
                                         </div>
 
-                                        <!-- APK File -->
+                                        <!-- APK / IPA File -->
                                         <div>
                                             <label for="apkFile" class="block text-sm font-medium text-ij-text mb-2">
-                                                APK File <span class="text-ij-error">*</span>
+                                                Add APK or IPA files <span class="text-ij-error">*</span>
                                             </label>
-                                            <input type="file" id="apkFile" name="apkFile" accept=".apk" class="hidden">
+                                            <input type="file" id="apkFile" name="apkFile" accept=".apk,.ipa"
+                                                class="hidden">
                                             <div id="fileInputDisplay"
-                                                class="jb-input border-2 border-dashed border-gray-600 hover:border-ij-blue cursor-pointer rounded-xl p-6 text-center transition-all duration-300 group">
+                                                class="jb-input border-2 border-dashed border-gray-600 hover:border-ij-blue cursor-pointer rounded-xl p-4 md:p-6 text-center transition-all duration-300 group">
                                                 <div class="flex flex-col items-center">
                                                     <div
-                                                        class="w-12 h-12 rounded-2xl bg-gradient-to-br from-ij-blue to-ij-purple flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                                                        <svg class="w-6 h-6 text-white" fill="none"
+                                                        class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-ij-blue to-ij-purple flex items-center justify-center mb-2 md:mb-3 group-hover:scale-110 transition-transform duration-300">
+                                                        <svg class="w-5 h-5 md:w-6 md:h-6 text-white" fill="none"
                                                             stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round"
                                                                 stroke-width="2"
                                                                 d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                                         </svg>
                                                     </div>
-                                                    <div id="fileInputText" class="text-ij-text mb-2">
+                                                    <div id="fileInputText"
+                                                        class="text-ij-text mb-1 text-sm md:text-base">
                                                         <span class="text-ij-blue font-medium">Click to browse</span> or
-                                                        drag and drop your APK file here
+                                                        drag and drop
                                                     </div>
-                                                    <div class="text-sm text-ij-text-dim">Maximum file size: 200MB</div>
+                                                    <div class="text-xs text-ij-text-dim">APK or IPA · Max 200MB each
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -281,7 +352,7 @@
                                         <label class="flex items-center cursor-pointer select-none">
                                             <input type="checkbox" id="replace_prev_check" class="hidden peer">
                                             <div
-                                                class="w-5 h-5 rounded-md border border-ij-text-dim peer-checked:bg-gradient-to-br peer-checked:from-ij-orange peer-checked:to-ij-pink flex items-center justify-center transition-all duration-200 mr-2">
+                                                class="w-5 h-5 rounded-md border border-ij-text-dim peer-checked:bg-gradient-to-br peer-checked:from-ij-orange peer-checked:to-ij-pink flex items-center justify-center transition-all duration-200 mr-2 flex-shrink-0">
                                                 <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
                                                     fill="none" stroke="currentColor" stroke-width="2"
                                                     viewBox="0 0 24 24">
@@ -289,14 +360,15 @@
                                                         d="M5 13l4 4L19 7" />
                                                 </svg>
                                             </div>
-                                            <span class="text-ij-text font-jetbrains">Replace previous build</span>
+                                            <span class="text-ij-text font-jetbrains text-sm">Replace previous
+                                                build</span>
                                         </label>
 
                                         <!-- Submit -->
                                         <button type="submit" id="submitBtn"
-                                            class="jb-button w-full py-3 rounded-xl text-white font-semibold text-lg shadow-lg">
+                                            class="jb-button w-full py-3 rounded-xl text-white font-semibold text-base md:text-lg shadow-lg">
                                             <span class="flex items-center justify-center">
-                                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor"
+                                                <svg class="w-5 h-5 mr-2 md:mr-3" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round"
                                                         stroke-width="2"
@@ -308,8 +380,8 @@
                                     </form>
 
                                     <!-- Progress Bar -->
-                                    <div id="progressContainer" class="mt-6 hidden">
-                                        <div class="flex items-center justify-between mb-3">
+                                    <div id="progressContainer" class="mt-4 md:mt-6 hidden">
+                                        <div class="flex items-center justify-between mb-2 md:mb-3">
                                             <span class="text-sm font-medium text-ij-text">Uploading your
                                                 build...</span>
                                             <span id="progressPercent"
@@ -325,17 +397,18 @@
                                     </div>
 
                                     <!-- Status + QR -->
-                                    <div id="statusAndQr" class="mt-6 hidden flex items-start gap-6">
-                                        <div id="statusMessage" class="flex-1 flex flex-col justify-between h-full">
-                                            <div id="statusContent" class="p-4 rounded-xl border-l-4">Build is ready!
-                                            </div>
+                                    <div id="statusAndQr" class="mt-4 md:mt-6 hidden flex items-start gap-4 md:gap-6">
+                                        <div id="statusMessage"
+                                            class="flex-1 min-w-0 flex flex-col justify-between h-full">
+                                            <div id="statusContent" class="p-3 md:p-4 rounded-xl border-l-4 text-sm">
+                                                Build is ready!</div>
                                             <br>
-                                            <div id="statusInstruction" class="text-sm text-gray-500">Scan this QR to
-                                                directly access this build</div>
+                                            <div id="statusInstruction" class="text-xs md:text-sm text-gray-500">Scan
+                                                this QR to directly access this build</div>
                                             <p id="qrValue"
                                                 class="text-[10px] text-ij-text-dim mt-1 break-all font-jetbrains"></p>
                                         </div>
-                                        <div id="qrContainer" class="text-center w-32 shrink-0">
+                                        <div id="qrContainer" class="text-center w-24 md:w-32 shrink-0 hidden">
                                             <canvas id="qrCanvas" class="mx-auto w-full h-auto"></canvas>
                                         </div>
                                     </div>
@@ -349,34 +422,44 @@
                     <!-- ===== APPS MANAGEMENT VIEW ===== -->
                     <div id="appsView" class="view">
                         <div class="max-w-5xl">
-                            <h1 class="text-3xl font-bold text-ij-text mb-2">Apps Management</h1>
-                            <p class="text-ij-text-dim mb-8">Create and manage your application entries used in uploads.</p>
+                            <h1 class="text-2xl md:text-3xl font-bold text-ij-text mb-1 md:mb-2">Apps Management</h1>
+                            <p class="text-ij-text-dim mb-4 md:mb-8 text-sm md:text-base">Create and manage your
+                                application entries used in uploads.</p>
 
-                            <div class="jb-card rounded-2xl p-6 mb-6">
-                                <h2 class="text-xl font-semibold text-ij-text mb-3">Create App</h2>
+                            <div class="jb-card rounded-2xl p-4 md:p-6 mb-4 md:mb-6">
+                                <h2 class="text-lg md:text-xl font-semibold text-ij-text mb-3">Create App</h2>
                                 <div class="space-y-3">
                                     <div>
-                                        <label class="block text-sm text-ij-text mb-1" for="newAppName">App Name <span class="text-ij-error">*</span></label>
-                                        <input id="newAppName" type="text" class="jb-input w-full px-4 py-3 rounded-xl" placeholder="Your app's name">
+                                        <label class="block text-sm text-ij-text mb-1" for="newAppName">App Name <span
+                                                class="text-ij-error">*</span></label>
+                                        <input id="newAppName" type="text"
+                                            class="jb-input w-full px-4 py-3 rounded-xl text-sm"
+                                            placeholder="Your app's name">
                                     </div>
                                     <div>
-                                        <label class="block text-sm text-ij-text mb-1" for="newAppIcon">Icon URL <span class="text-ij-error">*</span></label>
-                                        <input id="newAppIcon" type="url" class="jb-input w-full px-4 py-3 rounded-xl" placeholder="Your app's icon URL. Best if it's a square image.">
+                                        <label class="block text-sm text-ij-text mb-1" for="newAppIcon">Icon URL <span
+                                                class="text-ij-error">*</span></label>
+                                        <input id="newAppIcon" type="url"
+                                            class="jb-input w-full px-4 py-3 rounded-xl text-sm"
+                                            placeholder="https://example.com/icon.png">
                                     </div>
                                     <div class="flex justify-end">
-                                        <button id="createAppBtn" class="jb-button px-4 py-2 rounded-xl text-sm font-medium">Add App</button>
+                                        <button id="createAppBtn"
+                                            class="jb-button px-4 py-2 rounded-xl text-sm font-medium">Add App</button>
                                     </div>
                                     <p id="appsMessage" class="text-sm text-ij-text-dim hidden"></p>
                                 </div>
                             </div>
 
-                            <div class="jb-card rounded-2xl p-6">
+                            <div class="jb-card rounded-2xl p-4 md:p-6">
                                 <div class="flex items-center justify-between mb-3">
-                                    <h2 class="text-xl font-semibold text-ij-text">Existing Apps</h2>
+                                    <h2 class="text-lg md:text-xl font-semibold text-ij-text">Existing Apps</h2>
                                     <span id="appsCount" class="text-sm text-ij-text-dim">0 apps</span>
                                 </div>
+                                <!-- app items rendered here by JS — use app-icon-url class on URL spans -->
                                 <div id="appsList" class="space-y-3 text-sm text-ij-text-dim">
-                                    <p class="text-ij-text-dim">No apps yet. Use the form above to add your first app.</p>
+                                    <p class="text-ij-text-dim">No apps yet. Use the form above to add your first app.
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -385,12 +468,14 @@
                     <!-- ===== MANAGE BUILDS VIEW ===== -->
                     <div id="manageView" class="view">
                         <div class="max-w-5xl">
-                            <h1 class="text-3xl font-bold text-ij-text mb-2">Manage Builds</h1>
-                            <p class="text-ij-text-dim mb-8">View, search, and manage your uploaded builds.</p>
+                            <h1 class="text-2xl md:text-3xl font-bold text-ij-text mb-1 md:mb-2">Manage Builds</h1>
+                            <p class="text-ij-text-dim mb-4 md:mb-8 text-sm md:text-base">View, search, and manage your
+                                uploaded builds.</p>
 
-                            <div class="jb-card rounded-2xl p-8 mb-8">
-                                <h2 class="text-xl font-semibold text-ij-text mb-4">Storage Usage</h2>
-                                <div class="jb-card rounded-lg p-4 mb-6">
+                            <div class="jb-card rounded-2xl p-4 md:p-8 mb-4 md:mb-8">
+                                <h2 class="text-lg md:text-xl font-semibold text-ij-text mb-3 md:mb-4">Storage Usage
+                                </h2>
+                                <div class="jb-card rounded-lg p-4 mb-4 md:mb-6">
                                     <div class="flex justify-between items-center mb-2">
                                         <span class="text-sm font-medium text-ij-text-dim">Total Storage Used</span>
                                         <span id="storageSize"
@@ -411,235 +496,362 @@
                                     </div>
                                 </div>
 
-                                <h2 class="text-xl font-semibold text-ij-text mb-4">Your Builds</h2>
+                                <h2 class="text-lg md:text-xl font-semibold text-ij-text mb-3 md:mb-4">Your Builds</h2>
                                 <div class="mb-4 flex gap-2">
                                     <input type="text" id="buildsSearch" placeholder="Search builds..."
-                                        class="jb-input flex-1 px-4 py-3 rounded-lg text-sm">
+                                        class="jb-input flex-1 px-4 py-3 rounded-lg text-sm min-w-0">
                                     <button id="deleteSelectedBtn"
-                                        class="px-6 py-3 bg-ij-error rounded-lg text-white text-sm font-medium hover:opacity-90 transition hidden"
+                                        class="px-4 md:px-6 py-3 bg-ij-error rounded-lg text-white text-sm font-medium hover:opacity-90 transition hidden flex-shrink-0"
                                         title="Delete selected builds">
                                         Delete
                                     </button>
                                 </div>
-                                <div id="buildsContainer" class="space-y-2 max-h-96 overflow-y-auto pr-3">
+                                <div id="buildsContainer" class="space-y-2 max-h-96 overflow-y-auto pr-1 md:pr-3">
                                     <p class="text-ij-text-dim text-sm">Loading builds...</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <!-- end manage view -->
+
+                    <!-- ===== IOS INSTALL VIEW ===== -->
+                    <div id="ipaBuildsView" class="view">
+                        <div class="max-w-5xl">
+                            <h1 class="text-2xl md:text-3xl font-bold text-ij-text mb-1 md:mb-2">iOS Builds</h1>
+                            <p class="text-ij-text-dim mb-4 md:mb-8 text-sm md:text-base">View latest iOS builds and
+                                install
+                                via OTA (itms-services).<br><span class="text-[0.9rem] text-ij-text-dim">IPA files
+                                    generally expire
+                                    after a certain period.</span></p>
+                            <div class="jb-card rounded-2xl p-4 md:p-6 mb-4 md:mb-6">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h2 class="text-lg md:text-xl font-semibold text-ij-text">Available iOS Builds</h2>
+                                    <span id="iosBuildCount" class="text-sm text-ij-text-dim">0 builds</span>
+                                </div>
+                                <div id="iosBuildList" class="space-y-3 text-sm text-ij-text-dim">
+                                    <p class="text-ij-text-dim">No iOS builds found yet.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- ===== ABOUT VIEW ===== -->
                     <div id="aboutView" class="view">
                         <div class="max-w-4xl">
-
-                            <h1 class="text-3xl font-bold text-ij-text mb-2">About QDrop</h1>
-                            <p class="text-ij-text-dim mb-8">
-                                QDrop is an open-source QA build distribution platform designed for development teams to
-                                upload,
-                                manage, and distribute internal builds without relying on Google Play or external
-                                services.
+                            <h1 class="text-2xl md:text-3xl font-bold text-ij-text mb-1 md:mb-2">About QDrop</h1>
+                            <p class="text-ij-text-dim mb-4 md:mb-8 text-sm md:text-base">
+                                QDrop is a comprehensive open-source QA build distribution platform designed for
+                                development teams to
+                                upload, manage, and distribute internal builds without relying on Google Play or
+                                external services. Built with modern web technologies and cloud-native architecture.
                             </p>
 
-                            <div class="jb-card rounded-2xl p-8 space-y-8">
+                            <div class="jb-card rounded-2xl p-4 md:p-8 space-y-6 md:space-y-8">
 
-                                <!-- What is QDrop -->
                                 <div>
-                                    <h2 class="text-xl font-semibold text-ij-text mb-3">What is QDrop?</h2>
-                                    <p class="text-ij-text-dim leading-relaxed">
-                                        QDrop provides a streamlined workflow for distributing internal APK builds to
-                                        testers.
-                                        Developers can upload builds through the web interface, attach metadata such as
-                                        version,
-                                        environment, and changelog, and instantly make them available to testers through
-                                        the
-                                        companion Android application.
+                                    <h2 class="text-lg md:text-xl font-semibold text-ij-text mb-3">What is QDrop?</h2>
+                                    <p class="text-ij-text-dim leading-relaxed text-sm md:text-base">
+                                        QDrop provides a streamlined workflow for distributing internal APK and IPA
+                                        builds to
+                                        testers. Developers can upload builds through the web interface, attach
+                                        comprehensive metadata
+                                        such as version, environment, changelog, and instantly make them available to
+                                        testers through the companion mobile applications with QR code sharing.
                                     </p>
                                 </div>
 
-                                <!-- How it works -->
                                 <div>
-                                    <h2 class="text-xl font-semibold text-ij-text mb-3">How It Works</h2>
-                                    <ul class="space-y-2 text-ij-text-dim">
-                                        <li>• Upload builds using the QDrop Web dashboard.</li>
-                                        <li>• APK files are stored securely on <span class="text-ij-text">Cloudflare
-                                                R2</span>.</li>
-                                        <li>• Build metadata (version, label, changelog, uploader) is saved in <span
-                                                class="text-ij-text">Firebase Realtime Database</span>.</li>
-                                        <li>• The QDrop Android app fetches this metadata and lists available builds for
-                                            testers.</li>
-                                        <li>• Testers can download and install builds directly from the mobile app.</li>
+                                    <h2 class="text-lg md:text-xl font-semibold text-ij-text mb-3">How It Works</h2>
+                                    <ul class="space-y-2 text-ij-text-dim text-sm md:text-base">
+                                        <li>• Upload builds using the QDrop Web dashboard with drag-and-drop interface.
+                                        </li>
+                                        <li>• APK/IPA files are stored securely on <span class="text-ij-text">Cloudflare
+                                                R2</span> with presigned URLs.</li>
+                                        <li>• Build metadata is synchronized in <span class="text-ij-text">Firebase
+                                                Realtime Database</span>.</li>
+                                        <li>• Generate QR codes for instant sharing and deep linking via <span
+                                                class="text-ij-text">qdrop://</span> scheme.</li>
+                                        <li>• QDrop Android/Web apps fetch and display available builds with filtering
+                                            options.</li>
+                                        <li>• Testers can download and install builds directly from mobile apps or web
+                                            pages.</li>
+                                        <li>• Open access build pages provide distribution links.
+                                        </li>
                                     </ul>
                                 </div>
 
-                                <!-- Core Features -->
                                 <div>
-                                    <h2 class="text-xl font-semibold text-ij-text mb-3">Core Features</h2>
-                                    <ul class="space-y-2 text-ij-text-dim">
-                                        <li>• Upload APK builds with version, label, and changelog</li>
-                                        <li>• Real-time upload progress and status</li>
-                                        <li>• Generate Build IDs and QR codes for quick access</li>
-                                        <li>• Manage builds with search and bulk actions</li>
-                                        <li>• Track storage usage and build statistics</li>
-                                        <li>• Secure cloud storage powered by Cloudflare R2</li>
-                                        <li>• Metadata synchronization through Firebase</li>
-                                    </ul>
-                                </div>
-
-                                <!-- Platform Ecosystem -->
-                                <div>
-                                    <h2 class="text-xl font-semibold text-ij-text mb-3">Platform Components</h2>
-                                    <div class="space-y-3 text-ij-text-dim">
-
-                                        <p>
-                                            <span class="text-ij-text font-medium">QDrop Web</span> -
-                                            A dashboard for uploading builds, managing versions,
-                                            viewing storage usage, and organizing QA releases.
-                                        </p>
-
-                                        <p>
-                                            <span class="text-ij-text font-medium">QDrop Android App</span> -
-                                            A Jetpack Compose application that allows testers to browse,
-                                            filter, download, and install builds directly on their devices.
-                                        </p>
-
+                                    <h2 class="text-lg md:text-xl font-semibold text-ij-text mb-3">Core Features</h2>
+                                    <div class="grid md:grid-cols-2 gap-4">
+                                        <div>
+                                            <h3 class="font-medium text-ij-text mb-2">Build Management</h3>
+                                            <ul class="space-y-1 text-ij-text-dim text-sm">
+                                                <li>• Upload APK/IPA builds with metadata</li>
+                                                <li>• Version tracking and environment labels</li>
+                                                <li>• Changelog and release notes</li>
+                                                <li>• Build status and download tracking</li>
+                                                <li>• Bulk operations and batch management</li>
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-medium text-ij-text mb-2">Distribution</h3>
+                                            <ul class="space-y-1 text-ij-text-dim text-sm">
+                                                <li>• QR code generation for quick sharing</li>
+                                                <li>• Direct download links</li>
+                                                <li>• Server-side rendered build pages</li>
+                                                <li>• Organization-based access control</li>
+                                                <li>• Public and private build sharing</li>
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-medium text-ij-text mb-2">Analytics & Monitoring</h3>
+                                            <ul class="space-y-1 text-ij-text-dim text-sm">
+                                                <li>• Storage usage tracking</li>
+                                                <li>• Build download statistics</li>
+                                                <li>• Real-time status updates</li>
+                                                <li>• Builds management</li>
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-medium text-ij-text mb-2">Platform Support</h3>
+                                            <ul class="space-y-1 text-ij-text-dim text-sm">
+                                                <li>• Android APK for distribution</li>
+                                                <li>• Install IPA files from the browser.</li>
+                                                <li>• Web dashboard for all devices</li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- Technology -->
                                 <div>
-                                    <h2 class="text-xl font-semibold text-ij-text mb-3">Technology Stack</h2>
-                                    <ul class="space-y-2 text-ij-text-dim">
-                                        <li>• Frontend: HTML, TailwindCSS, JavaScript</li>
-                                        <li>• Backend Storage: Cloudflare R2</li>
-                                        <li>• Database: Firebase RTDB</li>
-                                        <li>• Mobile App: Android (Jetpack Compose)</li>
+                                    <h2 class="text-lg md:text-xl font-semibold text-ij-text mb-3">Advanced Features
+                                    </h2>
+                                    <ul class="space-y-2 text-ij-text-dim text-sm md:text-base">
+                                        <li>• <span class="text-ij-text font-medium">Real-time Synchronization</span> -
+                                            Instant updates across all connected devices</li>
+                                        <li>• <span class="text-ij-text font-medium">Secure Storage</span> - Cloudflare
+                                            R2 with presigned URLs and access control</li>
+                                        <li>• <span class="text-ij-text font-medium">Deep Linking</span> - QR codes open
+                                            directly in QDrop mobile apps</li>
+                                        <li>• <span class="text-ij-text font-medium">Organization Management</span> -
+                                            Multi-tenant support with isolated build spaces</li>
+                                        <li>• <span class="text-ij-text font-medium">Search & Filtering</span> - Find
+                                            builds by version, platform, or environment</li>
+                                        <li>• <span class="text-ij-text font-medium">File Integrity</span> - MD5/SHA
+                                            verification for uploaded builds</li>
+                                        <li>• <span class="text-ij-text font-medium">Error Handling</span> -
+                                            Comprehensive error pages and user feedback</li>
+                                        <li>• <span class="text-ij-text font-medium">Performance Optimized</span> - Lazy
+                                            loading, caching, and efficient data structures</li>
                                     </ul>
                                 </div>
 
-                                <!-- Open Source -->
                                 <div>
-                                    <h2 class="text-xl font-semibold text-ij-text mb-3">Open Source</h2>
-                                    <p class="text-ij-text-dim leading-relaxed">
-                                        QDrop is open-source and designed to be easily customizable.
-                                        You can fork the project, modify the workflow, or integrate it
-                                        into your internal QA pipeline.
-                                    </p>
+                                    <h2 class="text-lg md:text-xl font-semibold text-ij-text mb-3">Platform Components
+                                    </h2>
+                                    <div class="space-y-4 text-ij-text-dim text-sm md:text-base">
+                                        <div class="flex items-start gap-2">
+                                            <div class="w-2 h-2 rounded-full bg-ij-accent mt-2 flex-shrink-0"></div>
+                                            <div>
+                                                <p class="font-medium text-ij-text">• QDrop Web Dashboard</p>
+                                                <p>Full-featured web interface for uploading builds, managing versions,
+                                                    viewing analytics, organizing QA releases, and generating QR codes
+                                                    for distribution.</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-start gap-2">
+                                            <div class="w-2 h-2 rounded-full bg-ij-accent mt-2 flex-shrink-0"></div>
+                                            <div>
+                                                <p class="font-medium text-ij-text">• QDrop Android App</p>
+                                                <p>Native Android app built with Jetpack Compose for browsing,
+                                                    filtering, downloading, and installing APK builds with seamless QR
+                                                    code integration.</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-start gap-2">
+                                            <div class="w-2 h-2 rounded-full bg-ij-accent mt-2 flex-shrink-0"></div>
+                                            <div>
+                                                <p class="font-medium text-ij-text">• QDrop iOS Support</p>
+                                                <p>OTA (Over-The-Air) installation support for iOS builds with
+                                                    manifest-based distribution and QR code sharing.</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-start gap-2">
+                                            <div class="w-2 h-2 rounded-full bg-ij-accent mt-2 flex-shrink-0"></div>
+                                            <div>
+                                                <p class="font-medium text-ij-text">• Custom Distribution Pages</p>
+                                                <p>Open build distribution pages with QR codes, download links, and
+                                                    branded interfaces for external sharing.</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
+                                <div>
+                                    <h2 class="text-lg md:text-xl font-semibold text-ij-text mb-3">Open Source &
+                                        Extensibility</h2>
+                                    <p class="text-ij-text-dim leading-relaxed text-sm md:text-base mb-4">
+                                        QDrop is fully open-source and designed to be easily customizable and
+                                        extensible.
+                                        The modular architecture allows you to fork the project, modify workflows,
+                                        integrate
+                                        with your existing CI/CD pipelines, or extend functionality with custom plugins.
+                                    </p>
+                                    <div>
+                                        <h2 class="text-lg md:text-xl font-semibold text-ij-text mb-3">Public Access
+                                            URLs</h2>
+                                        <p class="text-ij-text-dim leading-relaxed text-sm md:text-base mb-4">
+                                            QDrop provides public URLs for open access to builds and organizations
+                                            without requiring authentication.
+                                            Share these links with external testers, stakeholders, or anyone who needs
+                                            access to your builds.
+                                        </p>
+                                        <div class="space-y-4">
+                                            <div class="bg-ij-bg-card rounded-lg p-4 border border-ij-border">
+                                                <h3 class="font-medium text-ij-text mb-2 flex items-center gap-2">
+                                                    Individual Build Pages
+                                                </h3>
+                                                <p class="text-ij-text-dim text-sm mb-3">
+                                                    Access specific builds directly via URL. Perfect for sharing
+                                                    individual releases with testers. Set SERVE_PUBLIC_URL=TRUE in your environment variables to enable.
+                                                </p>
+                                                <div class="bg-black/30 rounded p-3 font-mono text-xs text-ij-text-dim">
+                                                    <span
+                                                        class="text-ij-accent">BASE_URL/</span>/<span
+                                                        class="text-ij-blue">organization-id</span>/<span
+                                                        class="text-ij-purple">build-id</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+
+                        </div><!-- /content-container -->
+                    </div><!-- /view-container -->
+                </div><!-- /main-content -->
+            </div><!-- /app-container -->
+
+            <!-- ===================== MODALS ===================== -->
+
+            <div id="deleteConfirmModal" class="modal-delete-backdrop">
+                <div class="jb-card rounded-2xl p-6 w-96 max-w-md mx-4 fade-in relative overflow-hidden">
+                    <div id="deleteSpinnerOverlay"
+                        class="hidden absolute inset-0 rounded-2xl z-10 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-4">
+                        <div class="delete-spinner"></div>
+                        <p class="text-sm text-gray-300 font-inter">Deleting builds...</p>
+                    </div>
+                    <h2 class="text-xl font-bold text-ij-text mb-4">Delete Builds</h2>
+                    <p class="text-ij-text-dim mb-6">
+                        Are you sure you want to delete
+                        <span id="deleteCount" class="font-semibold text-ij-error">0</span>
+                        build(s)? This action cannot be undone.
+                    </p>
+                    <div class="flex gap-3">
+                        <button id="deleteCancelBtn"
+                            class="flex-1 px-4 py-3 rounded-xl border border-gray-600 text-ij-text-dim hover:text-ij-text transition">
+                            Cancel
+                        </button>
+                        <button id="deleteConfirmBtn"
+                            class="flex-1 px-4 py-3 rounded-xl bg-ij-error text-white font-medium hover:opacity-90 transition">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="deleteAppConfirmModal" class="modal-delete-backdrop">
+                <div class="jb-card rounded-2xl p-6 w-96 max-w-md mx-4 fade-in relative overflow-hidden">
+                    <h2 class="text-xl font-bold text-ij-text mb-4">Delete App</h2>
+                    <p class="text-ij-text-dim mb-6">
+                        Are you sure you want to delete the app
+                        <span id="deleteAppName" class="font-semibold text-ij-error">this app</span>?
+                        This action cannot be undone.
+                    </p>
+                    <div class="flex gap-3">
+                        <button id="deleteAppCancelBtn"
+                            class="flex-1 px-4 py-3 rounded-xl border border-gray-600 text-ij-text-dim hover:text-ij-text transition">
+                            Cancel
+                        </button>
+                        <button id="deleteAppConfirmBtn"
+                            class="flex-1 px-4 py-3 rounded-xl bg-ij-error text-white font-medium hover:opacity-90 transition">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Organization Setup Modal -->
+            <div id="orgModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+                <div class="jb-card rounded-2xl p-6 w-96 max-w-md mx-4 fade-in relative z-10">
+                    <div class="text-center mb-6">
+                        <div
+                            class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-ij-blue to-ij-purple flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-bold text-ij-text mb-2">Welcome to QDrop</h2>
+                        <p class="text-sm text-ij-text-dim leading-tight">Enter your organization ID to get started</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <input type="text" id="orgIdInput" placeholder="Enter your Organization ID"
+                                class="jb-input w-full px-4 py-3 rounded-xl placeholder-ij-text-dim font-jetbrains">
+                            <div id="orgErrorMessage" class="text-ij-error text-sm mt-2 hidden text-center"></div>
+                        </div>
+                        <div class="flex space-x-3 pt-4">
+                            <button id="orgSaveBtn"
+                                class="flex-1 jb-button px-4 py-3 rounded-xl text-white font-medium text-sm">
+                                Get Started
+                            </button>
                         </div>
                     </div>
-                    <!-- end about view -->
-
-                </div><!-- /content-container -->
-            </div><!-- /view-container -->
-        </div><!-- /main-content -->
-    </div><!-- /app-container -->
-
-    <!-- ===================== MODALS ===================== -->
-
-    <div id="deleteConfirmModal" class="modal-delete-backdrop">
-        <div class="jb-card rounded-2xl p-6 w-96 max-w-md mx-4 fade-in relative overflow-hidden">
-
-            <!-- Spinner overlay -->
-            <div id="deleteSpinnerOverlay"
-                class="hidden absolute inset-0 rounded-2xl z-10 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-4">
-                <div class="delete-spinner"></div>
-                <p class="text-sm text-gray-300 font-inter">Deleting builds...</p>
-            </div>
-
-            <h2 class="text-xl font-bold text-ij-text mb-4">Delete Builds</h2>
-            <p class="text-ij-text-dim mb-6">
-                Are you sure you want to delete
-                <span id="deleteCount" class="font-semibold text-ij-error">0</span>
-                build(s)? This action cannot be undone.
-            </p>
-            <div class="flex gap-3">
-                <button id="deleteCancelBtn"
-                    class="flex-1 px-4 py-3 rounded-xl border border-gray-600 text-ij-text-dim hover:text-ij-text transition">
-                    Cancel
-                </button>
-                <button id="deleteConfirmBtn"
-                    class="flex-1 px-4 py-3 rounded-xl bg-ij-error text-white font-medium hover:opacity-90 transition">
-                    Delete
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="deleteAppConfirmModal" class="modal-delete-backdrop">
-        <div class="jb-card rounded-2xl p-6 w-96 max-w-md mx-4 fade-in relative overflow-hidden">
-            <h2 class="text-xl font-bold text-ij-text mb-4">Delete App</h2>
-            <p class="text-ij-text-dim mb-6">
-                Are you sure you want to delete the app
-                <span id="deleteAppName" class="font-semibold text-ij-error">this app</span>?
-                This action cannot be undone.
-            </p>
-            <div class="flex gap-3">
-                <button id="deleteAppCancelBtn"
-                    class="flex-1 px-4 py-3 rounded-xl border border-gray-600 text-ij-text-dim hover:text-ij-text transition">
-                    Cancel
-                </button>
-                <button id="deleteAppConfirmBtn"
-                    class="flex-1 px-4 py-3 rounded-xl bg-ij-error text-white font-medium hover:opacity-90 transition">
-                    Delete
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Organization Setup Modal -->
-    <div id="orgModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
-        <div class="jb-card rounded-2xl p-6 w-96 max-w-md mx-4 fade-in relative z-10">
-            <div class="text-center mb-6">
-                <div
-                    class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-ij-blue to-ij-purple flex items-center justify-center">
-                    <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                    </svg>
-                </div>
-                <h2 class="text-2xl font-bold text-ij-text mb-2">Welcome to QDrop</h2>
-                <p class="text-sm ij-text-dim leading-tight">Enter your organization ID to get started</p>
-            </div>
-
-            <div class="space-y-4">
-                <div>
-                    <input type="text" id="orgIdInput" placeholder="Enter your Organization ID"
-                        class="jb-input w-full px-4 py-3 rounded-xl placeholder-ij-text-dim font-jetbrains">
-                    <div id="orgErrorMessage" class="text-ij-error text-sm mt-2 hidden text-center mt-5"></div>
-                </div>
-
-                <div class="flex space-x-3 pt-4">
-                    <button id="orgSaveBtn"
-                        class="flex-1 jb-button px-4 py-3 rounded-xl text-white font-medium text-sm">
-                        Get Started
-                    </button>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div id="snackbar" class="fixed top-8 right-16
-    bg-[#0f1b34]/90 backdrop-blur
-    text-[#7dd3fc]
-    text-sm px-4 py-2
-    rounded-lg border border-white/10
-    shadow-xl
-    opacity-0 translate-y-2
-    transition-all duration-300
-    pointer-events-none">
-        Copied to clipboard
-    </div>
+            <div id="snackbar" class="fixed top-8 right-4 md:right-16
+        bg-[#0f1b34]/90 backdrop-blur
+        text-[#7dd3fc]
+        text-sm px-4 py-2
+        rounded-lg border border-white/10
+        shadow-xl
+        opacity-0 translate-y-2
+        transition-all duration-300
+        pointer-events-none">
+                Copied to clipboard
+            </div>
 
-    <!-- ===================== SCRIPTS ===================== -->
-    <script src="js/config.js"></script>
-    <script src="js/organization-manager.js"></script>
-    <script src="js/upload-manager.js"></script>
-    <script src="js/sidebar-navigation.js"></script>
-    <script src="js/storage-analytics.js"></script>
-    <script src="js/builds-manager.js"></script>
-    <script src="js/app.js"></script>
+            <div id="qrModal"
+                class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center px-4 py-8">
+                <div class="max-w-sm w-full rounded-xl bg-[#020617] border border-white/10 p-5">
+                    <div class="flex items-center justify-between gap-3 mb-4">
+                        <div>
+                            <h3 class="text-sm font-semibold text-white">QR Code</h3>
+                            <p class="text-xs text-ij-text-dim">Scan to open the build link.</p>
+                        </div>
+                        <button onclick="closeQR()"
+                            class="text-xs font-semibold text-white/80 hover:text-white">Close</button>
+                    </div>
+                    <div class="flex flex-col items-center gap-3">
+                        <div class="w-48 h-48 rounded-lg bg-white p-3 flex items-center justify-center">
+                            <canvas id="qrModalCanvas" width="160" height="160" class="rounded"></canvas>
+                        </div>
+                        <div id="qrLink" class="text-xs text-ij-text-dim break-all text-center"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== SCRIPTS ===================== -->
+            <script src="/js/config.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+            <script src="/js/organization-manager.js"></script>
+            <script src="/js/upload-manager.js"></script>
+            <script src="/js/sidebar-navigation.js"></script>
+            <script src="/js/storage-analytics.js"></script>
+            <script src="/js/ios-installer.js"></script>
+            <script src="/js/builds-manager.js"></script>
+            <script src="/js/app.js"></script>
 
 </body>
 
