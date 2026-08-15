@@ -1074,7 +1074,7 @@ async function notifyOrganizationBuildChange(organizationId, { buildId, metadata
                 tokens: tokenChunk,
                 notification: {
                     title,
-                    body,
+                    body: `${body} is ${isUpdate ? 'updated. You may install the latest version.' : 'now available for installation.'}`,
                 },
                 data: dataPayload,
                 android: {
