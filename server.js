@@ -2,10 +2,10 @@ require('dotenv').config(); // Load environment variables
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const admin = require('firebase-admin');
 const { PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-const serviceAccount = require('./serviceAccountKey.json');
 const { createStorage } = require('./storage');
 
 function requireEnv(name) {
@@ -16,8 +16,31 @@ function requireEnv(name) {
     return value;
 }
 
+function loadServiceAccount() {
+    const fromEnv = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (fromEnv) {
+        try {
+            return JSON.parse(fromEnv);
+        } catch (error) {
+            throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON must be valid JSON');
+        }
+    }
+
+    const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
+        || path.join(__dirname, 'serviceAccountKey.json');
+
+    if (!fs.existsSync(keyPath)) {
+        throw new Error(
+            'Firebase credentials missing. Set FIREBASE_SERVICE_ACCOUNT_JSON, '
+            + 'or mount/provide serviceAccountKey.json (or GOOGLE_APPLICATION_CREDENTIALS).'
+        );
+    }
+
+    return JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+}
+
 admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+    credential: admin.credential.cert(loadServiceAccount()),
     databaseURL: requireEnv('FIREBASE_DATABASE_URL'),
 });
 
