@@ -1,0 +1,8 @@
+node_modules
+.env
+.git
+.gitignore
+screenshots
+*.md
+serviceAccountKey.json
+.github
