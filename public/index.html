@@ -40,8 +40,6 @@
 
     <link rel="stylesheet" href="/css/styles.css">
 
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 
     <style>
@@ -100,9 +98,8 @@
                                     class="bg-gradient-to-r from-ij-blue via-ij-purple to-ij-pink bg-clip-text text-transparent">Drop</span>
                             </span>
 
-                            <span
+                            <span id="appVersionBadge"
                                 class="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-ij-text-dim">
-                                1.0.5
                             </span>
                         </div>
                     </div>
@@ -716,7 +713,7 @@
                                                 </p>
                                                 <div class="bg-black/30 rounded p-3 font-mono text-xs text-ij-text-dim">
                                                     <span
-                                                        class="text-ij-accent">BASE_URL/</span>/<span
+                                                        class="text-ij-accent">https://qdrop.up.railway.app/</span>/<span
                                                         class="text-ij-blue">organization-id</span>/<span
                                                         class="text-ij-purple">build-id</span>
                                                 </div>
@@ -735,11 +732,6 @@
 
             <div id="deleteConfirmModal" class="modal-delete-backdrop">
                 <div class="jb-card rounded-2xl p-6 w-96 max-w-md mx-4 fade-in relative overflow-hidden">
-                    <div id="deleteSpinnerOverlay"
-                        class="hidden absolute inset-0 rounded-2xl z-10 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-4">
-                        <div class="delete-spinner"></div>
-                        <p class="text-sm text-gray-300 font-inter">Deleting builds...</p>
-                    </div>
                     <h2 class="text-xl font-bold text-ij-text mb-4">Delete Builds</h2>
                     <p class="text-ij-text-dim mb-6">
                         Are you sure you want to delete
@@ -756,6 +748,13 @@
                             Delete
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <div id="deleteSpinnerOverlay" class="modal-delete-backdrop">
+                <div class="flex flex-col items-center justify-center gap-4 fade-in">
+                    <div class="delete-spinner"></div>
+                    <p class="text-sm text-gray-300 font-inter">Deleting builds...</p>
                 </div>
             </div>
 

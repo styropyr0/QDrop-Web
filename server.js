@@ -2,19 +2,29 @@ require('dotenv').config(); // Load environment variables
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const CONFIG = require('./public/js/config');
 const admin = require('firebase-admin');
-const { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const serviceAccount = require('./serviceAccountKey.json');
+const { createStorage } = require('./storage');
+
+function requireEnv(name) {
+    const value = process.env[name];
+    if (!value) {
+        throw new Error(`Missing required environment variable: ${name}`);
+    }
+    return value;
+}
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: CONFIG.FIREBASE_CONFIG.databaseURL
+    databaseURL: requireEnv('FIREBASE_DATABASE_URL'),
 });
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const storage = createStorage();
+const { client: s3Client, bucket: STORAGE_BUCKET, buildPublicObjectUrl } = storage;
 
 app.use(cors());
 app.use(express.json());
@@ -30,27 +40,6 @@ function publicAccessGuard(req, res, next) {
     next();
 }
 
-if (process.env.FIREBASE_CONFIG) {
-    try {
-        const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
-        admin.initializeApp({
-            credential: admin.credential.cert(firebaseConfig),
-            databaseURL: process.env.FIREBASE_DATABASE_URL || firebaseConfig.databaseURL
-        });
-    } catch (error) {
-        console.error('Error initializing Firebase:', error);
-    }
-}
-
-const s3Client = new S3Client({
-    region: 'auto',
-    endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-    },
-});
-
 // API for generating presigned upload URL
 app.post('/api/upload-url', async (req, res) => {
     try {
@@ -63,7 +52,7 @@ app.post('/api/upload-url', async (req, res) => {
         const startTime = Date.now();
 
         const command = new PutObjectCommand({
-            Bucket: process.env.R2_BUCKET_NAME,
+            Bucket: STORAGE_BUCKET,
             Key: fileName,
             ContentType: fileType,
         });
@@ -74,8 +63,9 @@ app.post('/api/upload-url', async (req, res) => {
 
         const endTime = Date.now();
         const responseTime = endTime - startTime;
+        const publicUrl = buildPublicObjectUrl(fileName);
 
-        res.json({ presignedUrl, responseTime });
+        res.json({ presignedUrl, publicUrl, responseTime, provider: storage.provider });
     } catch (error) {
         console.error('Error generating upload URL:', error);
         res.status(500).json({ error: 'Failed to generate upload URL' });
@@ -119,7 +109,7 @@ app.get('/api/storage-info', async (req, res) => {
         console.log(`Getting storage info for org: ${orgId}`);
 
         const listCommand = new ListObjectsV2Command({
-            Bucket: process.env.R2_BUCKET_NAME,
+            Bucket: STORAGE_BUCKET,
             Prefix: `${orgId}_`,
         });
 
@@ -138,7 +128,8 @@ app.get('/api/storage-info', async (req, res) => {
 
         res.json({
             organizationId: orgId,
-            bucketName: process.env.R2_BUCKET_NAME,
+            bucketName: STORAGE_BUCKET,
+            provider: storage.provider,
             totalObjects,
             totalSize: totalSize / (1024 * 1024),
             availableStorage: availableStorageMB,
@@ -898,6 +889,499 @@ async function cleanupOrphanedTags(db, organizationId) {
     return Object.keys(removals);
 }
 
+function getDb() {
+    return admin.database();
+}
+
+function createAppKey(appName) {
+    const normalized = String(appName || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '');
+    return normalized || `app_${Date.now()}`;
+}
+
+async function upsertOrganizationTags(db, organizationId, tags) {
+    if (!Array.isArray(tags) || tags.length < 2) return;
+
+    const tagKey1 = String(tags[0]).toLowerCase();
+    const tagKey2 = 'tttt_' + String(tags[1]).replace(/\./g, '_');
+
+    await db.ref(`organizations/${organizationId}/tags`).update({
+        [tagKey1]: tags[0],
+        [tagKey2]: tags[1],
+    });
+}
+
+function extractFcmTokens(tokensNode) {
+    if (!tokensNode) return [];
+
+    if (Array.isArray(tokensNode)) {
+        return [...new Set(tokensNode.filter(token => typeof token === 'string' && token.trim()))];
+    }
+
+    if (typeof tokensNode !== 'object') {
+        return typeof tokensNode === 'string' && tokensNode.trim() ? [tokensNode.trim()] : [];
+    }
+
+    const tokens = new Set();
+
+    Object.entries(tokensNode).forEach(([key, value]) => {
+        if (typeof value === 'string' && value.trim()) {
+            tokens.add(value.trim());
+            return;
+        }
+
+        if (value && typeof value === 'object') {
+            const nestedToken = value.token || value.fcmToken || value.registrationToken;
+            if (typeof nestedToken === 'string' && nestedToken.trim()) {
+                tokens.add(nestedToken.trim());
+                return;
+            }
+        }
+
+        // Common pattern: token used as the RTDB key
+        if (typeof key === 'string' && key.length >= 80) {
+            tokens.add(key);
+        }
+    });
+
+    return [...tokens];
+}
+
+function chunkArray(items, size) {
+    const chunks = [];
+    for (let i = 0; i < items.length; i += size) {
+        chunks.push(items.slice(i, i + size));
+    }
+    return chunks;
+}
+
+async function getOrganizationFcmTokens(organizationId) {
+    const snapshot = await getDb().ref(`fcm_tokens/${organizationId}`).once('value');
+    if (!snapshot.exists()) return [];
+    return extractFcmTokens(snapshot.val());
+}
+
+async function removeInvalidFcmTokens(organizationId, invalidTokens) {
+    if (!invalidTokens.length) return;
+
+    const tokensRef = getDb().ref(`fcm_tokens/${organizationId}`);
+    const snapshot = await tokensRef.once('value');
+    if (!snapshot.exists()) return;
+
+    const invalidSet = new Set(invalidTokens);
+    const updates = {};
+    const node = snapshot.val();
+
+    if (Array.isArray(node)) {
+        const next = node.filter(token => !invalidSet.has(token));
+        await tokensRef.set(next);
+        return;
+    }
+
+    if (typeof node !== 'object' || node === null) return;
+
+    Object.entries(node).forEach(([key, value]) => {
+        if (invalidSet.has(key)) {
+            updates[key] = null;
+            return;
+        }
+
+        if (typeof value === 'string' && invalidSet.has(value)) {
+            updates[key] = null;
+            return;
+        }
+
+        if (value && typeof value === 'object') {
+            const nestedToken = value.token || value.fcmToken || value.registrationToken;
+            if (typeof nestedToken === 'string' && invalidSet.has(nestedToken)) {
+                updates[key] = null;
+            }
+        }
+    });
+
+    if (Object.keys(updates).length > 0) {
+        await tokensRef.update(updates);
+    }
+}
+
+function isInvalidFcmTokenError(error) {
+    const code = error?.code || '';
+    return (
+        code === 'messaging/registration-token-not-registered' ||
+        code === 'messaging/invalid-registration-token' ||
+        code === 'messaging/invalid-argument'
+    );
+}
+
+async function notifyOrganizationBuildChange(organizationId, { buildId, metadata, isUpdate }) {
+    try {
+        const tokens = await getOrganizationFcmTokens(organizationId);
+        if (!tokens.length) {
+            console.log(`No FCM tokens for org ${organizationId}; skipping notification`);
+            return;
+        }
+
+        const appName = metadata?.category || metadata?.appName || 'App';
+        const version = metadata?.version || 'unknown';
+        const label = metadata?.label || '';
+        const title = isUpdate ? 'Build updated' : 'New build available';
+        const body = label
+            ? `${appName} ${version} (${label})`
+            : `${appName} ${version}`;
+
+        const dataPayload = {
+            type: isUpdate ? 'build_updated' : 'build_uploaded',
+            organizationId: String(organizationId),
+            buildId: String(buildId || ''),
+            version: String(version),
+            label: String(label),
+            category: String(metadata?.category || ''),
+            deepLink: `qdrop://build?id=${buildId || ''}`,
+        };
+
+        const invalidTokens = [];
+        let successCount = 0;
+        let failureCount = 0;
+
+        for (const tokenChunk of chunkArray(tokens, 500)) {
+            const response = await admin.messaging().sendEachForMulticast({
+                tokens: tokenChunk,
+                notification: {
+                    title,
+                    body,
+                },
+                data: dataPayload,
+                android: {
+                    priority: 'high',
+                },
+                apns: {
+                    payload: {
+                        aps: {
+                            sound: 'default',
+                        },
+                    },
+                },
+            });
+
+            successCount += response.successCount;
+            failureCount += response.failureCount;
+
+            response.responses.forEach((result, index) => {
+                if (!result.success && isInvalidFcmTokenError(result.error)) {
+                    invalidTokens.push(tokenChunk[index]);
+                }
+            });
+        }
+
+        if (invalidTokens.length > 0) {
+            await removeInvalidFcmTokens(organizationId, invalidTokens);
+            console.log(
+                `Removed ${invalidTokens.length} invalid FCM tokens for org ${organizationId}`
+            );
+        }
+
+        console.log(
+            `FCM notify org=${organizationId} build=${buildId} ` +
+            `success=${successCount} failed=${failureCount} type=${isUpdate ? 'update' : 'upload'}`
+        );
+    } catch (error) {
+        console.error(`Failed to send FCM notification for org ${organizationId}:`, error);
+    }
+}
+
+// GET organization (validate + apps/filters)
+app.get('/api/organizations/:orgId', async (req, res) => {
+    try {
+        const { orgId } = req.params;
+        if (!orgId) {
+            return res.status(400).json({ error: 'orgId is required' });
+        }
+
+        const snapshot = await getDb().ref(`organizations/${orgId}`).once('value');
+        if (!snapshot.exists()) {
+            return res.status(404).json({ error: 'Organization not found' });
+        }
+
+        const org = snapshot.val() || {};
+        res.json({
+            id: orgId,
+            name: org.name || '',
+            apps: org.apps || {},
+            filters: org.filters || {},
+            tags: org.tags || {},
+        });
+    } catch (error) {
+        console.error('Error fetching organization:', error);
+        res.status(500).json({ error: 'Failed to fetch organization' });
+    }
+});
+
+// Create app under organization
+app.post('/api/organizations/:orgId/apps', async (req, res) => {
+    try {
+        const { orgId } = req.params;
+        const { appName, iconUrl, appKey: providedKey } = req.body || {};
+
+        if (!orgId || !appName || !iconUrl) {
+            return res.status(400).json({ error: 'orgId, appName, and iconUrl are required' });
+        }
+
+        const db = getDb();
+        const orgSnapshot = await db.ref(`organizations/${orgId}`).once('value');
+        if (!orgSnapshot.exists()) {
+            return res.status(404).json({ error: 'Organization not found' });
+        }
+
+        const appKey = providedKey || createAppKey(appName);
+        await db.ref(`organizations/${orgId}/apps/${appKey}`).set(appName);
+        await db.ref(`organizations/${orgId}/filters/${appName}`).set(iconUrl);
+
+        res.json({ success: true, appKey, appName, iconUrl });
+    } catch (error) {
+        console.error('Error creating app:', error);
+        res.status(500).json({ error: 'Failed to create app' });
+    }
+});
+
+// Update app under organization
+app.put('/api/organizations/:orgId/apps/:appKey', async (req, res) => {
+    try {
+        const { orgId, appKey } = req.params;
+        const { appName, iconUrl, oldAppName } = req.body || {};
+
+        if (!orgId || !appKey || !appName || !iconUrl) {
+            return res.status(400).json({ error: 'orgId, appKey, appName, and iconUrl are required' });
+        }
+
+        const db = getDb();
+        const orgSnapshot = await db.ref(`organizations/${orgId}`).once('value');
+        if (!orgSnapshot.exists()) {
+            return res.status(404).json({ error: 'Organization not found' });
+        }
+
+        if (oldAppName && oldAppName !== appName) {
+            await db.ref(`organizations/${orgId}/filters/${oldAppName}`).remove();
+        }
+
+        await db.ref(`organizations/${orgId}/apps/${appKey}`).set(appName);
+        await db.ref(`organizations/${orgId}/filters/${appName}`).set(iconUrl);
+
+        res.json({ success: true, appKey, appName, iconUrl });
+    } catch (error) {
+        console.error('Error updating app:', error);
+        res.status(500).json({ error: 'Failed to update app' });
+    }
+});
+
+// Delete app under organization
+app.delete('/api/organizations/:orgId/apps/:appKey', async (req, res) => {
+    try {
+        const { orgId, appKey } = req.params;
+        const appName = req.body?.appName || req.query?.appName;
+
+        if (!orgId || !appKey || !appName) {
+            return res.status(400).json({ error: 'orgId, appKey, and appName are required' });
+        }
+
+        const db = getDb();
+        await db.ref(`organizations/${orgId}/apps/${appKey}`).remove();
+        await db.ref(`organizations/${orgId}/filters/${appName}`).remove();
+
+        res.json({ success: true, appKey, appName });
+    } catch (error) {
+        console.error('Error deleting app:', error);
+        res.status(500).json({ error: 'Failed to delete app' });
+    }
+});
+
+// List builds for organization
+app.get('/api/builds', async (req, res) => {
+    try {
+        const { orgId, ipaOnly } = req.query;
+        if (!orgId) {
+            return res.status(400).json({ error: 'orgId is required' });
+        }
+
+        const snapshot = await getDb().ref(`qa_builds/${orgId}`).once('value');
+        const data = snapshot.val() || {};
+
+        let builds = Object.entries(data).map(([id, build]) => ({ id, ...build }));
+
+        if (ipaOnly === 'true' || ipaOnly === '1') {
+            builds = builds.filter(build => !!build.ipaUrl);
+        }
+
+        builds.sort((a, b) => {
+            const aTime = new Date(a.uploadedAt || 0).getTime() || 0;
+            const bTime = new Date(b.uploadedAt || 0).getTime() || 0;
+            return bTime - aTime;
+        });
+
+        res.json({ organizationId: orgId, builds });
+    } catch (error) {
+        console.error('Error listing builds:', error);
+        res.status(500).json({ error: 'Failed to list builds' });
+    }
+});
+
+// Latest build matching label + version (must be before /:buildId)
+app.get('/api/builds/latest', async (req, res) => {
+    try {
+        const { orgId, label, version } = req.query;
+        if (!orgId || !label || !version) {
+            return res.status(400).json({ error: 'orgId, label, and version are required' });
+        }
+
+        const snapshot = await getDb()
+            .ref(`qa_builds/${orgId}`)
+            .orderByChild('label')
+            .equalTo(label)
+            .once('value');
+
+        if (!snapshot.exists()) {
+            return res.json({ buildId: null, build: null });
+        }
+
+        let latestKey = null;
+        let latestTime = 0;
+        let latestBuild = null;
+
+        snapshot.forEach(child => {
+            const val = child.val() || {};
+            if (val.version === version) {
+                const uploadedAt = new Date(val.uploadedAt || 0).getTime() || 0;
+                if (uploadedAt > latestTime) {
+                    latestTime = uploadedAt;
+                    latestKey = child.key;
+                    latestBuild = val;
+                }
+            }
+        });
+
+        res.json({
+            buildId: latestKey,
+            build: latestKey ? { id: latestKey, ...latestBuild } : null,
+        });
+    } catch (error) {
+        console.error('Error finding latest build:', error);
+        res.status(500).json({ error: 'Failed to find latest build' });
+    }
+});
+
+// Get single build
+app.get('/api/builds/:buildId', async (req, res) => {
+    try {
+        const { buildId } = req.params;
+        const { orgId } = req.query;
+
+        if (!orgId || !buildId) {
+            return res.status(400).json({ error: 'orgId and buildId are required' });
+        }
+
+        const snapshot = await getDb().ref(`qa_builds/${orgId}/${buildId}`).once('value');
+        if (!snapshot.exists()) {
+            return res.status(404).json({ error: 'Build not found' });
+        }
+
+        res.json({ id: buildId, ...snapshot.val() });
+    } catch (error) {
+        console.error('Error fetching build:', error);
+        res.status(500).json({ error: 'Failed to fetch build' });
+    }
+});
+
+// Create build metadata (+ tags)
+app.post('/api/builds', async (req, res) => {
+    try {
+        const { organizationId, metadata, tags } = req.body || {};
+
+        if (!organizationId || !metadata || typeof metadata !== 'object') {
+            return res.status(400).json({ error: 'organizationId and metadata are required' });
+        }
+
+        const db = getDb();
+        const orgSnapshot = await db.ref(`organizations/${organizationId}`).once('value');
+        if (!orgSnapshot.exists()) {
+            return res.status(404).json({ error: 'Organization not found' });
+        }
+
+        const buildPayload = {
+            ...metadata,
+            organizationId,
+        };
+
+        const newBuildRef = db.ref(`qa_builds/${organizationId}`).push();
+        await newBuildRef.set(buildPayload);
+
+        const tagList = Array.isArray(tags) && tags.length >= 2
+            ? tags
+            : [buildPayload.label, buildPayload.version].filter(Boolean);
+
+        if (tagList.length >= 2) {
+            await upsertOrganizationTags(db, organizationId, tagList);
+        }
+
+        await notifyOrganizationBuildChange(organizationId, {
+            buildId: newBuildRef.key,
+            metadata: buildPayload,
+            isUpdate: false,
+        });
+
+        res.json({ success: true, buildId: newBuildRef.key });
+    } catch (error) {
+        console.error('Error creating build:', error);
+        res.status(500).json({ error: 'Failed to create build' });
+    }
+});
+
+// Update build metadata (+ tags)
+app.put('/api/builds/:buildId', async (req, res) => {
+    try {
+        const { buildId } = req.params;
+        const { organizationId, metadata, tags } = req.body || {};
+
+        if (!organizationId || !buildId || !metadata || typeof metadata !== 'object') {
+            return res.status(400).json({ error: 'organizationId, buildId, and metadata are required' });
+        }
+
+        const db = getDb();
+        const buildRef = db.ref(`qa_builds/${organizationId}/${buildId}`);
+        const existing = await buildRef.once('value');
+        if (!existing.exists()) {
+            return res.status(404).json({ error: 'Build not found' });
+        }
+
+        const buildPayload = {
+            ...metadata,
+            organizationId,
+        };
+
+        await buildRef.update(buildPayload);
+
+        const tagList = Array.isArray(tags) && tags.length >= 2
+            ? tags
+            : [buildPayload.label, buildPayload.version].filter(Boolean);
+
+        if (tagList.length >= 2) {
+            await upsertOrganizationTags(db, organizationId, tagList);
+        }
+
+        await notifyOrganizationBuildChange(organizationId, {
+            buildId,
+            metadata: buildPayload,
+            isUpdate: true,
+        });
+
+        res.json({ success: true, buildId });
+    } catch (error) {
+        console.error('Error updating build:', error);
+        res.status(500).json({ error: 'Failed to update build' });
+    }
+});
+
 // API for deleting builds
 app.post('/api/delete-builds', async (req, res) => {
     try {
@@ -972,7 +1456,7 @@ app.post('/api/delete-builds', async (req, res) => {
 
                 if ((normalizedClearType === 'android' || normalizedClearType === 'both') && fileNameAndroid) {
                     const deleteCommandAndroid = new DeleteObjectCommand({
-                        Bucket: process.env.R2_BUCKET_NAME,
+                        Bucket: STORAGE_BUCKET,
                         Key: fileNameAndroid,
                     });
 
@@ -983,7 +1467,7 @@ app.post('/api/delete-builds', async (req, res) => {
 
                 if ((normalizedClearType === 'ios' || normalizedClearType === 'both') && fileNameiOS) {
                     const deleteCommandiOS = new DeleteObjectCommand({
-                        Bucket: process.env.R2_BUCKET_NAME,
+                        Bucket: STORAGE_BUCKET,
                         Key: fileNameiOS,
                     });
 
@@ -1120,4 +1604,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Object storage provider: ${storage.provider} (bucket: ${STORAGE_BUCKET})`);
 });

@@ -398,8 +398,8 @@ class UploadManager {
 
         // Validate organization ID before upload
         try {
-            const isValidOrg = (await this.orgManager.validateOrgIdWithFirebase(this.orgManager.orgId)).exists();
-            if (!isValidOrg) {
+            const org = await this.orgManager.fetchOrganization(this.orgManager.orgId);
+            if (!org) {
                 this.showStatus('Invalid organization ID. Upload not allowed. Please contact your administrator.', 'error');
                 return;
             }
@@ -476,7 +476,7 @@ class UploadManager {
                 );
             }
 
-            // Save to Firebase
+            // Save metadata via backend
             this.updateProgress(80, 'Saving metadata...');
             const metadata = this.createMetadata(
                 formData,
@@ -487,14 +487,10 @@ class UploadManager {
 
             let buildId = "";
             if (!replacePrevious || latestBuildKey === null) {
-                buildId = await this.saveToFirebase(metadata);
+                buildId = await this.saveBuild(metadata);
             } else {
-                buildId = await this.updateBuildInFirebase(latestBuildKey, metadata);
-                buildId = latestBuildKey;
+                buildId = await this.updateBuild(latestBuildKey, metadata);
             }
-
-            let tags = [metadata.label, metadata.version];
-            await this.addTag(this.orgManager.orgId, tags);
 
             localStorage.setItem('label', metadata.label);
             localStorage.setItem('user', metadata.user);
@@ -582,11 +578,14 @@ class UploadManager {
 
     async getBuildData(buildId) {
         try {
-            const snapshot = await database
-                .ref(`qa_builds/${this.orgManager.orgId}/${buildId}`)
-                .once("value");
-
-            return snapshot.exists() ? snapshot.val() : null;
+            const response = await fetch(
+                `/api/builds/${encodeURIComponent(buildId)}?orgId=${encodeURIComponent(this.orgManager.orgId)}`
+            );
+            if (response.status === 404) return null;
+            if (!response.ok) {
+                throw new Error(`Failed to fetch build: ${response.statusText}`);
+            }
+            return await response.json();
         } catch (err) {
             console.error("Error fetching build data:", err);
             return null;
@@ -605,25 +604,11 @@ class UploadManager {
                     clearType
                 })
             });
-            return true;
+            return response.ok;
         } catch (error) {
             console.error('Error deleting build:', error);
             return false;
         }
-    }
-
-    async addTag(orgId, tags) {
-        const tagsRef = database.ref(`organizations/${orgId}/tags`);
-
-        const tagKey1 = tags[0].toLowerCase();
-        const tagKey2 = "tttt_" + tags[1].replace(/\./g, '_');
-
-        const newTags = {
-            [tagKey1]: tags[0],
-            [tagKey2]: tags[1],
-        };
-
-        await tagsRef.update(newTags);
     }
 
     setQRCode(value) {
@@ -650,31 +635,17 @@ class UploadManager {
 
     async getLatestBuildKey(label, version) {
         try {
-            const buildsRef = database.ref(`qa_builds/${this.orgManager.orgId}`);
-
-            const snapshot = await buildsRef
-                .orderByChild("label")
-                .equalTo(label)
-                .once("value");
-
-            if (!snapshot.exists()) return null;
-
-            let latestKey = null;
-            let latestTime = 0;
-
-            snapshot.forEach(child => {
-                const val = child.val();
-
-                if (val.version === version) {
-                    const uploadedAt = new Date(val.uploadedAt).getTime();
-                    if (uploadedAt > latestTime) {
-                        latestTime = uploadedAt;
-                        latestKey = child.key;
-                    }
-                }
+            const params = new URLSearchParams({
+                orgId: this.orgManager.orgId,
+                label,
+                version,
             });
-
-            return latestKey;
+            const response = await fetch(`/api/builds/latest?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error(`Failed to find latest build: ${response.statusText}`);
+            }
+            const data = await response.json();
+            return data.buildId || null;
         } catch (err) {
             console.error("Error in getLatestBuildKeyByLabelAndVersion:", err);
             return null;
@@ -702,7 +673,11 @@ class UploadManager {
                 throw new Error(`Failed to get upload URL: ${response.statusText}`);
             }
 
-            const { presignedUrl } = await response.json();
+            const { presignedUrl, publicUrl } = await response.json();
+
+            if (!publicUrl) {
+                throw new Error('Upload URL response missing publicUrl');
+            }
 
             this.updateProgress(10, 'Starting upload...');
 
@@ -730,15 +705,6 @@ class UploadManager {
                 xhr.send(file);
             });
 
-            this.updateProgress(80, 'Upload complete, getting public URL...');
-
-            const publicUrl = presignedUrl
-                .split('?')[0]
-                .replace(
-                    'https://qdrop.ca3d30cf900eb4f78198b750bce85367.r2.cloudflarestorage.com',
-                    'https://pub-03b74c9b026549ce8ff4ca1720eeb45a.r2.dev'
-                );
-
             this.updateProgress(100, 'File uploaded successfully!');
 
             return publicUrl;
@@ -749,23 +715,43 @@ class UploadManager {
         }
     }
 
-    async saveToFirebase(metadata) {
-        const buildsRef = database.ref(`qa_builds/${this.orgManager.orgId}`);
-        const newBuildRef = buildsRef.push();
+    async saveBuild(metadata) {
+        const response = await fetch('/api/builds', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                organizationId: this.orgManager.orgId,
+                metadata,
+                tags: [metadata.label, metadata.version],
+            }),
+        });
 
-        await newBuildRef.set(metadata);
-        return newBuildRef.key;
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || `Failed to save build metadata: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.buildId;
     }
 
-    async updateBuildInFirebase(key, metadata) {
-        try {
-            const buildRef = database.ref(`qa_builds/${this.orgManager.orgId}/${key}`);
-            await buildRef.update(metadata);
-            return true;
-        } catch (err) {
-            console.error("Error updating build in Firebase:", err);
-            return false;
+    async updateBuild(key, metadata) {
+        const response = await fetch(`/api/builds/${encodeURIComponent(key)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                organizationId: this.orgManager.orgId,
+                metadata,
+                tags: [metadata.label, metadata.version],
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || `Failed to update build metadata: ${response.statusText}`);
         }
+
+        return key;
     }
 
     resetForm(form) {

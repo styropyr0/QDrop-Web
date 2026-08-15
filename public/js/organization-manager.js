@@ -51,8 +51,8 @@ class OrganizationManager {
         console.log('Validating org ID:', orgId);
         
         try {
-            const snapshot = await this.validateOrgIdWithFirebase(orgId);
-            if (!snapshot || !snapshot.exists()) {
+            const org = await this.fetchOrganization(orgId);
+            if (!org) {
                 this.showOrgError('Organization ID not found. Please contact your administrator for a valid organization ID.');
                 return;
             }
@@ -60,7 +60,7 @@ class OrganizationManager {
             console.log('Saving org ID:', orgId);
             this.orgId = orgId;
             localStorage.setItem('qdrop_org_id', orgId);
-            localStorage.setItem('org_name', snapshot.val().name || '');
+            localStorage.setItem('org_name', org.name || '');
             this.hideOrgModal();
             this.showMainInterface();
         } catch (error) {
@@ -69,15 +69,16 @@ class OrganizationManager {
         }
     }
 
-    async validateOrgIdWithFirebase(orgId) {
+    async fetchOrganization(orgId) {
         try {
-            // Check if organization exists in Firebase
-            const orgRef = database.ref(`organizations/${orgId}`);
-            const snapshot = await orgRef.once('value');
-
-            return snapshot.exists() ? snapshot: null;
+            const response = await fetch(`/api/organizations/${encodeURIComponent(orgId)}`);
+            if (response.status === 404) return null;
+            if (!response.ok) {
+                throw new Error(`Failed to fetch organization: ${response.statusText}`);
+            }
+            return await response.json();
         } catch (error) {
-            console.error('Firebase validation error:', error);
+            console.error('Organization validation error:', error);
             return null;
         }
     }
@@ -98,10 +99,10 @@ class OrganizationManager {
         if (orgName) orgName.textContent = localStorage.getItem('org_name') || '';
         if (name) name.value = localStorage.getItem('user') || '';
 
-        this.validateOrgIdWithFirebase(this.orgId).then(snapshot => {
-            if (snapshot && snapshot.exists()) {
-                this.apps = snapshot.val().apps || {};
-                this.filters = snapshot.val().filters || {};
+        this.fetchOrganization(this.orgId).then(org => {
+            if (org) {
+                this.apps = org.apps || {};
+                this.filters = org.filters || {};
                 this.appCategoryEntries = this.filters;
                 console.log('Apps:', this.apps);
                 console.log('App filters:', this.filters);
@@ -216,14 +217,18 @@ class OrganizationManager {
             const oldAppName = this.editingAppName;
             const appKey = this.editingAppKey;
             try {
-                // If name changed, update filters key and app name
-                if (oldAppName && oldAppName !== appName) {
-                    // remove old filter entry
-                    await database.ref(`organizations/${this.orgId}/filters/${oldAppName}`).remove();
-                }
+                const response = await fetch(
+                    `/api/organizations/${encodeURIComponent(this.orgId)}/apps/${encodeURIComponent(appKey)}`,
+                    {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ appName, iconUrl, oldAppName }),
+                    }
+                );
 
-                await database.ref(`organizations/${this.orgId}/apps/${appKey}`).set(appName);
-                await database.ref(`organizations/${this.orgId}/filters/${appName}`).set(iconUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to update app: ${response.statusText}`);
+                }
 
                 this.apps[appKey] = appName;
                 if (oldAppName && oldAppName !== appName) {
@@ -245,8 +250,18 @@ class OrganizationManager {
 
         const appKey = this.createAppKey(appName);
         try {
-            await database.ref(`organizations/${this.orgId}/apps/${appKey}`).set(appName);
-            await database.ref(`organizations/${this.orgId}/filters/${appName}`).set(iconUrl);
+            const response = await fetch(
+                `/api/organizations/${encodeURIComponent(this.orgId)}/apps`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ appName, iconUrl, appKey }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Failed to create app: ${response.statusText}`);
+            }
 
             this.apps[appKey] = appName;
             this.filters[appName] = iconUrl;
@@ -314,8 +329,14 @@ class OrganizationManager {
         const { appKey, appName } = this.appToDelete;
 
         try {
-            await database.ref(`organizations/${this.orgId}/apps/${appKey}`).remove();
-            await database.ref(`organizations/${this.orgId}/filters/${appName}`).remove();
+            const response = await fetch(
+                `/api/organizations/${encodeURIComponent(this.orgId)}/apps/${encodeURIComponent(appKey)}?appName=${encodeURIComponent(appName)}`,
+                { method: 'DELETE' }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Failed to delete app: ${response.statusText}`);
+            }
 
             delete this.apps[appKey];
             delete this.filters[appName];
@@ -394,10 +415,10 @@ class OrganizationManager {
     async loadApps() {
         if (!this.orgId) return;
         try {
-            const snapshot = await database.ref(`organizations/${this.orgId}`).once('value');
-            const orgData = snapshot.val() || {};
-            this.apps = orgData.apps || {};
-            this.filters = orgData.filters || {};
+            const org = await this.fetchOrganization(this.orgId);
+            if (!org) return;
+            this.apps = org.apps || {};
+            this.filters = org.filters || {};
             this.appCategoryEntries = this.filters;
             this.setupDropdown(this.apps);
             this.renderAppsList();

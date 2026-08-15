@@ -14,15 +14,8 @@ class BuildsManager {
 
         this.builds = [];
         this.selectedBuildIds = new Set();
-        this.firebaseDb = null;
 
-        this.initFirebase();
         this.initEventListeners();
-    }
-
-    initFirebase() {
-        // Firebase is already initialized in app.js, just get reference
-        this.firebaseDb = firebase.database();
     }
 
     initEventListeners() {
@@ -64,20 +57,16 @@ class BuildsManager {
 
             console.log('Loading builds for org:', orgId);
 
-            const buildsRef = this.firebaseDb.ref(`qa_builds/${orgId}`);
-            buildsRef.once('value', (snapshot) => {
-                const data = snapshot.val();
-                this.builds = data ? Object.entries(data)
-                    .map(([id, build]) => ({ id, ...build }))
-                    .sort((a, b) => {
-                        const aTime = new Date(a.uploadedAt).getTime() || 0;
-                        const bTime = new Date(b.uploadedAt).getTime() || 0;
-                        return bTime - aTime;
-                    }) : [];
+            const response = await fetch(`/api/builds?orgId=${encodeURIComponent(orgId)}`);
+            if (!response.ok) {
+                throw new Error(`Failed to load builds: ${response.statusText}`);
+            }
 
-                console.log('Builds loaded:', this.builds.length);
-                this.renderBuilds(this.builds);
-            });
+            const data = await response.json();
+            this.builds = Array.isArray(data.builds) ? data.builds : [];
+
+            console.log('Builds loaded:', this.builds.length);
+            this.renderBuilds(this.builds);
         } catch (error) {
             console.error('Error loading builds:', error);
             this.buildsContainer.innerHTML = '<p class="text-ij-error text-sm">Error loading builds</p>';
@@ -214,6 +203,8 @@ class BuildsManager {
                 }
             });
         });
+
+        this.updateDeleteButton();
     }
 
     showSnackbar(message = "Copied to clipboard") {
@@ -290,6 +281,8 @@ class BuildsManager {
     async deleteSelected() {
         if (this.selectedBuildIds.size === 0) return;
 
+        const spinnerOverlay = document.getElementById('deleteSpinnerOverlay');
+
         try {
             const orgId = localStorage.getItem('qdrop_org_id');
             const buildIds = Array.from(this.selectedBuildIds);
@@ -298,7 +291,8 @@ class BuildsManager {
             this.deleteSelectedBtn.disabled = true;
             this.deleteSelectedBtn.textContent = 'Deleting...';
 
-            document.getElementById('deleteSpinnerOverlay').classList.remove('hidden');
+            this.hideDeleteConfirm();
+            if (spinnerOverlay) spinnerOverlay.classList.add('active');
 
             const response = await fetch('/api/delete-builds', {
                 method: 'POST',
@@ -314,7 +308,7 @@ class BuildsManager {
             console.log('Delete result:', result);
 
             this.selectedBuildIds.clear();
-            this.hideDeleteConfirm();
+            this.updateDeleteButton();
             this.loadBuilds();
             document.dispatchEvent(new CustomEvent('storageUpdated'));
             this.deleteSelectedBtn.disabled = false;
@@ -325,7 +319,7 @@ class BuildsManager {
             this.deleteSelectedBtn.disabled = false;
             this.deleteSelectedBtn.textContent = 'Delete';
         } finally {
-            document.getElementById('deleteSpinnerOverlay').classList.add('hidden');
+            if (spinnerOverlay) spinnerOverlay.classList.remove('active');
         }
     }
 
@@ -345,14 +339,8 @@ class BuildsManager {
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        // Wait a bit for Firebase to initialize
-        setTimeout(() => {
-            window.buildsManager = new BuildsManager();
-        }, 500);
+        window.buildsManager = new BuildsManager();
     });
 } else {
-    // Wait a bit for Firebase to initialize
-    setTimeout(() => {
-        window.buildsManager = new BuildsManager();
-    }, 500);
+    window.buildsManager = new BuildsManager();
 }

@@ -28,12 +28,13 @@ class IOSInstaller {
         }
 
         try {
-            const snapshot = await database.ref(`qa_builds/${orgId}`).once('value');
-            const builds = snapshot.val() || {};
+            const response = await fetch(`/api/builds?orgId=${encodeURIComponent(orgId)}&ipaOnly=true`);
+            if (!response.ok) {
+                throw new Error(`Failed to load iOS builds: ${response.statusText}`);
+            }
 
-            const entries = Object.entries(builds)
-                .filter(([key, build]) => build.ipaUrl)
-                .reverse();
+            const data = await response.json();
+            const entries = (data.builds || []).map(build => [build.id, build]);
 
             if (!entries.length) {
                 this.showMessage('No iOS builds available. Upload an IPA build to generate iOS install links.');

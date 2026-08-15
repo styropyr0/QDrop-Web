@@ -233,16 +233,18 @@ input::-webkit-inner-spin-button {
 
 /* ---------- Modals ---------- */
 .modal-backdrop {
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 
 .modal-delete-backdrop {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 50;
     align-items: center;
     justify-content: center;
