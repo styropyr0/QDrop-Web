@@ -4,7 +4,7 @@ QDrop is an open-source web app for managing QA builds and distributing Android/
 
 The web UI talks to an Express backend that stores build metadata in Firebase Realtime Database, uploads binaries to Cloudflare R2 or AWS S3 via presigned URLs, and serves install/download pages for sharing.
 
-**Current version:** 1.0.6 — see [CHANGELOG.md](CHANGELOG.md)
+**Current version:** 1.0.6 — see [CHANGELOG.md](https://github.com/styropyr0/QDrop-Web/releases/tag/v1.0.6)
 
 ## Mobile App
 
